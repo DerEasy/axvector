@@ -17,7 +17,7 @@
     A destructor function may also be supplied. There is no default destructor. The destructor will be called on items
     that are *irrevocably* removed from the vector. It's prototype is void (*)(void *), like the free() function.
 
-    To provide built-in flexibility, the vector also has storage for userdata. This is simply a void *. Userdata is
+    To provide built-in flexibility, the vector also has storage for a context. This is simply a void *. The context is
     not used by the vector itself and is exclusively controlled by the user.
 
     All functions on AXvector return something. If the meaning of a function doesn't allow for any sensible return
@@ -33,7 +33,7 @@ typedef struct AXvectorFuncs {
     AXvector *(*sizedNew)(unsigned long size);
     // create AXvector with default size
     AXvector *(*new)(void);
-    // call destructor on all items if available, then destroy AXvector and return userdata
+    // call destructor on all items if available, then destroy AXvector and return context
     void *(*destroy)(AXvector *v);
     // push item at end of vector, true iff OOM
     bool (*push)(AXvector *v, void *val);
@@ -125,10 +125,10 @@ typedef struct AXvectorFuncs {
     AXvector *(*setDestructor)(AXvector *v, void (*destroy)(void *));
     // get destructor function
     void (*(*getDestructor)(AXvector *v))(void *);
-    // set userdata
-    AXvector *(*setUserdata)(AXvector *v, void *userdata);
-    // get userdata
-    void *(*getUserdata)(AXvector *v);
+    // set context
+    AXvector *(*setContext)(AXvector *v, void *userdata);
+    // get context
+    void *(*getContext)(AXvector *v);
     // pointer to first item for direct access
     void **(*data)(AXvector *v);
     // capacity (number of items that can fit without resizing) in this AXvector

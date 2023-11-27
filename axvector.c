@@ -17,7 +17,7 @@ struct AXvector {
     ulong cap;
     int (*comp)(const void *, const void *);
     void (*destroy)(void *);
-    void *userdata;
+    void *context;
 };
 
 
@@ -52,7 +52,7 @@ static AXvector *sizedNew(ulong size) {
     v->len = 0;
     v->cap = size;
     v->comp = defaultComparator;
-    v->userdata = NULL;
+    v->context = NULL;
     v->destroy = NULL;
     return v;
 }
@@ -68,10 +68,10 @@ static void *destroy(AXvector *v) {
         v->destroy(v->items[--v->len]);
     }
 
-    void *userdata = v->userdata;
+    void *context = v->context;
     free(v->items);
     free(v);
-    return userdata;
+    return context;
 }
 
 
@@ -206,7 +206,7 @@ static AXvector *copy(AXvector *v) {
     memcpy(v2->items, v->items, toItemSize(v->len));
     v2->len = v->len;
     v2->comp = v->comp;
-    v2->userdata = v->userdata;
+    v2->context = v->context;
     v2->destroy = NULL;
     return v2;
 }
@@ -225,7 +225,7 @@ static AXvector *slice(AXvector *v, long index1, long index2) {
     memcpy(v2->items, v->items + i1, toItemSize(i2 - i1));
     v2->len = i2 - i1;
     v2->comp = v->comp;
-    v2->userdata = v->userdata;
+    v2->context = v->context;
     v2->destroy = NULL;
     return v2;
 }
@@ -247,7 +247,7 @@ static AXvector *rslice(AXvector *v, long index1, long index2) {
 
     v2->len = i2 - i1;
     v2->comp = v->comp;
-    v2->userdata = v->userdata;
+    v2->context = v->context;
     v2->destroy = NULL;
     return v2;
 }
@@ -395,7 +395,7 @@ static AXvector *filterSplit(AXvector *v, bool (*f)(const void *)) {
     v->len = len1;
     v2->len = len2;
     v2->comp = v->comp;
-    v2->userdata = v->userdata;
+    v2->context = v->context;
     v2->destroy = v->destroy;
     return v2;
 }
@@ -528,14 +528,14 @@ static void (*getDestructor(AXvector *v))(void *) {
 }
 
 
-static AXvector *setUserdata(AXvector *v, void *userdata) {
-    v->userdata = userdata;
+static AXvector *setContext(AXvector *v, void *userdata) {
+    v->context = userdata;
     return v;
 }
 
 
-static void *getUserdata(AXvector *v) {
-    return v->userdata;
+static void *getContext(AXvector *v) {
+    return v->context;
 }
 
 
@@ -602,8 +602,8 @@ const AXvectorFuncs axv = {
         getComparator,
         setDestructor,
         getDestructor,
-        setUserdata,
-        getUserdata,
+        setContext,
+        getContext,
         data,
         cap
 };
