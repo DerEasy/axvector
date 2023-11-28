@@ -122,7 +122,7 @@ static bool set(AXvector *v, long index, void *val) {
 
 static bool swap(AXvector *v, long index1, long index2) {
     ulong i1 = normaliseIndex(v->len, index1).u;
-    ulong i2 = normaliseIndex(v->len, index2).u;
+    ulong i2 = normaliseIndex(v->len, index2).u - 1;
     if (i1 >= v->len || i2 >= v->len)
         return true;
 
@@ -150,7 +150,7 @@ static AXvector *reverse(AXvector *v) {
 
 static bool reverseSection(AXvector *v, long index1, long index2) {
     ulong i1 = normaliseIndex(v->len, index1).u;
-    ulong i2 = normaliseIndex(v->len, index2).u;
+    ulong i2 = normaliseIndex(v->len, index2).u - 1;
     if (i1 >= v->len || i2 >= v->len)
         return true;
 
@@ -485,7 +485,7 @@ static long linearSearch(AXvector *v, void *val) {
 static long linearSearchSection(AXvector *v, void *val, long index1, long index2) {
     long i1 = normaliseIndex(v->len, index1).s;
     long i2 = normaliseIndex(v->len, index2).s;
-    if (i1 >= v->len || i2 >= v->len || i1 < 0 || i2 < 0)
+    if (i1 >= v->len || i2 > v->len || i1 < 0 || i2 < 0)
         return -1;
 
     for (long i = i1; i < i2; ++i) {
