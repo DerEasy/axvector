@@ -402,7 +402,8 @@ static AXvector *filterSplit(AXvector *v, bool (*f)(const void *)) {
 
 
 static void *foreach(AXvector *v, bool (*f)(void *, long, void *), void *arg) {
-    for (long i = 0; i < v->len; ++i) {
+    const long length = len(v);
+    for (long i = 0; i < length; ++i) {
         if (!f(v->items[i], i, arg)) {
             return arg;
         }
@@ -428,7 +429,7 @@ static AXvector *forSection(AXvector *v, bool (*f)(void *, long, void *), void *
 
     long i1 = normaliseIndex(v->len, index1).s;
     long i2 = normaliseIndex(v->len, index2).s;
-    i2 = MIN(v->len, i2); i2 = MAX(0, i2);
+    i2 = MIN(len(v), i2); i2 = MAX(0, i2);
 
     for (long i = i1; i < i2; ++i) {
         if (!f(v->items[i], i, arg)) {
@@ -472,7 +473,8 @@ static long binarySearch(AXvector *v, void *val) {
 
 
 static long linearSearch(AXvector *v, void *val) {
-    for (long i = 0; i < v->len; ++i) {
+    const long length = len(v);
+    for (long i = 0; i < length; ++i) {
         if (v->comp(&val, v->items + i) == 0) {
             return i;
         }
@@ -485,7 +487,7 @@ static long linearSearch(AXvector *v, void *val) {
 static long linearSearchSection(AXvector *v, void *val, long index1, long index2) {
     long i1 = normaliseIndex(v->len, index1).s;
     long i2 = normaliseIndex(v->len, index2).s;
-    if (i1 >= v->len || i2 > v->len || i1 < 0 || i2 < 0)
+    if (i1 >= len(v) || i2 > len(v) || i1 < 0 || i2 < 0)
         return -1;
 
     for (long i = i1; i < i2; ++i) {
