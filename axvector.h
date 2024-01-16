@@ -138,7 +138,13 @@ struct axvectorFn {
     long (*cap)(axvector *v);
 };
 
+#ifdef AXVECTOR_NAMESPACE
+#define axv AXVECTOR_NAMESPACE
+#endif
+
 // access all axvector functions through this struct as a simulated namespace
 extern const struct axvectorFn axv;
+
+#undef axv
 
 #endif //AXVECTOR_AXVECTOR_H

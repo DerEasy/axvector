@@ -567,6 +567,10 @@ static long cap(axvector *v) {
 }
 
 
+#ifdef AXVECTOR_NAMESPACE
+#define axv AXVECTOR_NAMESPACE
+#endif
+
 const struct axvectorFn axv = {
         sizedNew,
         new,
@@ -616,3 +620,5 @@ const struct axvectorFn axv = {
         data,
         cap
 };
+
+#undef axv
