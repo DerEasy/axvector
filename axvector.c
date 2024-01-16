@@ -11,7 +11,7 @@
 
 typedef unsigned long ulong;
 
-struct AXvector {
+struct axvector {
     void **items;
     ulong len;
     ulong cap;
@@ -27,8 +27,8 @@ union Long {
 };
 
 
-static long len(AXvector *v);
-static bool resize(AXvector *v, ulong size);
+static long len(axvector *v);
+static bool resize(axvector *v, ulong size);
 
 
 static ulong toItemSize(ulong n) {
@@ -43,9 +43,9 @@ static int defaultComparator(const void *a, const void *b) {
 }
 
 
-static AXvector *sizedNew(ulong size) {
+static axvector *sizedNew(ulong size) {
     size = MAX(1, size);
-    AXvector *v = malloc(sizeof *v);
+    axvector *v = malloc(sizeof *v);
     if (v) v->items = malloc(toItemSize(size));
 
     if (!v || !v->items) {
@@ -62,12 +62,12 @@ static AXvector *sizedNew(ulong size) {
 }
 
 
-static AXvector *new(void) {
+static axvector *new(void) {
     return sizedNew(7);
 }
 
 
-static void *destroy(AXvector *v) {
+static void *destroy(axvector *v) {
     if (v->destroy) while (v->len) {
         v->destroy(v->items[--v->len]);
     }
@@ -79,7 +79,7 @@ static void *destroy(AXvector *v) {
 }
 
 
-static bool push(AXvector *v, void *val) {
+static bool push(axvector *v, void *val) {
     if (v->len >= v->cap) {
         ulong cap = (v->cap << 1) | 1;  // add another bit
         void **items = realloc(v->items, toItemSize(cap));
@@ -93,12 +93,12 @@ static bool push(AXvector *v, void *val) {
 }
 
 
-static void *pop(AXvector *v) {
+static void *pop(axvector *v) {
     return v->len ? v->items[--v->len] : NULL;
 }
 
 
-static void *top(AXvector *v) {
+static void *top(axvector *v) {
     return v->len ? v->items[v->len - 1] : NULL;
 }
 
@@ -110,13 +110,13 @@ static union Long normaliseIndex(ulong len, long index) {
 }
 
 
-static void *at(AXvector *v, long index) {
+static void *at(axvector *v, long index) {
     ulong i = normaliseIndex(v->len, index).u;
     return i < v->len ? v->items[i] : NULL;
 }
 
 
-static bool set(AXvector *v, long index, void *val) {
+static bool set(axvector *v, long index, void *val) {
     ulong i = normaliseIndex(v->len, index).u;
     if (i >= v->len) return true;
     v->items[i] = val;
@@ -124,7 +124,7 @@ static bool set(AXvector *v, long index, void *val) {
 }
 
 
-static bool swap(AXvector *v, long index1, long index2) {
+static bool swap(axvector *v, long index1, long index2) {
     ulong i1 = normaliseIndex(v->len, index1).u;
     ulong i2 = normaliseIndex(v->len, index2).u - 1;
     if (i1 >= v->len || i2 >= v->len)
@@ -137,7 +137,7 @@ static bool swap(AXvector *v, long index1, long index2) {
 }
 
 
-static AXvector *reverse(AXvector *v) {
+static axvector *reverse(axvector *v) {
     void **l = v->items;
     void **r = v->items + v->len - 1;
 
@@ -152,7 +152,7 @@ static AXvector *reverse(AXvector *v) {
 }
 
 
-static bool reverseSection(AXvector *v, long index1, long index2) {
+static bool reverseSection(axvector *v, long index1, long index2) {
     ulong i1 = normaliseIndex(v->len, index1).u;
     ulong i2 = normaliseIndex(v->len, index2).u - 1;
     if (i1 >= v->len || i2 >= v->len)
@@ -172,7 +172,7 @@ static bool reverseSection(AXvector *v, long index1, long index2) {
 }
 
 
-static AXvector *rotate(AXvector *v, long n) {
+static axvector *rotate(axvector *v, long n) {
     if (n == 0) return v;
     reverse(v);
     reverseSection(v, 0, n - 1);
@@ -181,7 +181,7 @@ static AXvector *rotate(AXvector *v, long n) {
 }
 
 
-static bool shift(AXvector *v, long index, unsigned long n) {
+static bool shift(axvector *v, long index, unsigned long n) {
     if (n == 0)
         return false;
     if (v->len + n > v->cap && resize(v, v->len + n))
@@ -192,7 +192,7 @@ static bool shift(AXvector *v, long index, unsigned long n) {
 }
 
 
-static long discard(AXvector *v, long n) {
+static long discard(axvector *v, long n) {
     const long removed = n = MIN(len(v), n);
 
     if (v->destroy) while (n > 0) {
@@ -204,7 +204,7 @@ static long discard(AXvector *v, long n) {
 }
 
 
-static AXvector *clear(AXvector *v) {
+static axvector *clear(axvector *v) {
     if (v->destroy) while (v->len) {
         v->destroy(v->items[--v->len]);
     }
@@ -214,8 +214,8 @@ static AXvector *clear(AXvector *v) {
 }
 
 
-static AXvector *copy(AXvector *v) {
-    AXvector *v2 = sizedNew(v->cap);
+static axvector *copy(axvector *v) {
+    axvector *v2 = sizedNew(v->cap);
     if (!v2) return NULL;
 
     memcpy(v2->items, v->items, toItemSize(v->len));
@@ -227,13 +227,13 @@ static AXvector *copy(AXvector *v) {
 }
 
 
-static AXvector *slice(AXvector *v, long index1, long index2) {
+static axvector *slice(axvector *v, long index1, long index2) {
     long i1 = index1 + (index1 < 0) * len(v);
     long i2 = index2 + (index2 < 0) * len(v);
     i1 = MAX(0, i1); i1 = MIN(i1, len(v));
     i2 = MAX(0, i2); i2 = MIN(i2, len(v));
 
-    AXvector *v2 = sizedNew(v->len);
+    axvector *v2 = sizedNew(v->len);
     if (!v2) return NULL;
 
     memcpy(v2->items, v->items + i1, toItemSize(i2 - i1));
@@ -245,13 +245,13 @@ static AXvector *slice(AXvector *v, long index1, long index2) {
 }
 
 
-static AXvector *rslice(AXvector *v, long index1, long index2) {
+static axvector *rslice(axvector *v, long index1, long index2) {
     long i1 = index1 + (index1 < 0) * len(v);
     long i2 = index2 + (index2 < 0) * len(v);
     i1 = MAX(0, i1); i1 = MIN(i1, len(v));
     i2 = MAX(0, i2); i2 = MIN(i2, len(v));
 
-    AXvector *v2 = sizedNew(v->len);
+    axvector *v2 = sizedNew(v->len);
     if (!v2) return NULL;
 
     void **save = v2->items;
@@ -267,7 +267,7 @@ static AXvector *rslice(AXvector *v, long index1, long index2) {
 }
 
 
-static bool resize(AXvector *v, ulong size) {
+static bool resize(axvector *v, ulong size) {
     size = MAX(1, size);
 
     if (size < v->len && v->destroy) while (v->len > size) {
@@ -284,13 +284,13 @@ static bool resize(AXvector *v, ulong size) {
 }
 
 
-static AXvector *destroyItem(AXvector *v, void *val) {
+static axvector *destroyItem(axvector *v, void *val) {
     if (v->destroy) v->destroy(val);
     return v;
 }
 
 
-static void *max(AXvector *v) {
+static void *max(axvector *v) {
     if (v->len == 0) return NULL;
 
     void *max = *v->items;
@@ -304,7 +304,7 @@ static void *max(AXvector *v) {
 }
 
 
-static void *min(AXvector *v) {
+static void *min(axvector *v) {
     if (v->len == 0) return NULL;
 
     void *min = *v->items;
@@ -318,7 +318,7 @@ static void *min(AXvector *v) {
 }
 
 
-static bool any(AXvector *v, bool (*f)(const void *)) {
+static bool any(axvector *v, bool (*f)(const void *)) {
     void **val = v->items;
     void **bound = v->items + v->len;
 
@@ -330,7 +330,7 @@ static bool any(AXvector *v, bool (*f)(const void *)) {
 }
 
 
-static bool all(AXvector *v, bool (*f)(const void *)) {
+static bool all(axvector *v, bool (*f)(const void *)) {
     void **val = v->items;
     void **bound = v->items + v->len;
 
@@ -342,7 +342,7 @@ static bool all(AXvector *v, bool (*f)(const void *)) {
 }
 
 
-static long count(AXvector *v, void *val) {
+static long count(axvector *v, void *val) {
     long n = 0;
     void **curr = v->items;
     void **bound = v->items + v->len;
@@ -351,7 +351,7 @@ static long count(AXvector *v, void *val) {
 }
 
 
-static bool compare(AXvector *v1, AXvector *v2) {
+static bool compare(axvector *v1, axvector *v2) {
     if (v1->len != v2->len) return false;
 
     for (ulong i = 0; i < v1->len; ++i) {
@@ -364,7 +364,7 @@ static bool compare(AXvector *v1, AXvector *v2) {
 }
 
 
-static AXvector *map(AXvector *v, void *(*f)(void *)) {
+static axvector *map(axvector *v, void *(*f)(void *)) {
     void **val = v->items;
     void **bound = v->items + v->len;
 
@@ -377,7 +377,7 @@ static AXvector *map(AXvector *v, void *(*f)(void *)) {
 }
 
 
-static AXvector *filter(AXvector *v, bool (*f)(const void *)) {
+static axvector *filter(axvector *v, bool (*f)(const void *)) {
     ulong len = 0;
     const bool shouldFree = v->destroy;
 
@@ -394,8 +394,8 @@ static AXvector *filter(AXvector *v, bool (*f)(const void *)) {
 }
 
 
-static AXvector *filterSplit(AXvector *v, bool (*f)(const void *)) {
-    AXvector *v2 = sizedNew(v->len);
+static axvector *filterSplit(axvector *v, bool (*f)(const void *)) {
+    axvector *v2 = sizedNew(v->len);
     if (!v2) return NULL;
 
     ulong len1 = 0, len2 = 0;
@@ -416,7 +416,7 @@ static AXvector *filterSplit(AXvector *v, bool (*f)(const void *)) {
 }
 
 
-static void *foreach(AXvector *v, bool (*f)(void *, long, void *), void *arg) {
+static void *foreach(axvector *v, bool (*f)(void *, long, void *), void *arg) {
     const long length = len(v);
     for (long i = 0; i < length; ++i) {
         if (!f(v->items[i], i, arg)) {
@@ -428,7 +428,7 @@ static void *foreach(AXvector *v, bool (*f)(void *, long, void *), void *arg) {
 }
 
 
-static void *rforeach(AXvector *v, bool (*f)(void *, long, void *), void *arg) {
+static void *rforeach(axvector *v, bool (*f)(void *, long, void *), void *arg) {
     for (long i = len(v) - 1; i >= 0; --i) {
         if (!f(v->items[i], i, arg)) {
             return arg;
@@ -439,8 +439,8 @@ static void *rforeach(AXvector *v, bool (*f)(void *, long, void *), void *arg) {
 }
 
 
-static void *forSection(AXvector *v, bool (*f)(void *, long, void *), void *arg,
-                            long index1, long index2) {
+static void *forSection(axvector *v, bool (*f)(void *, long, void *), void *arg,
+                        long index1, long index2) {
 
     long i1 = normaliseIndex(v->len, index1).s;
     long i2 = normaliseIndex(v->len, index2).s;
@@ -456,7 +456,7 @@ static void *forSection(AXvector *v, bool (*f)(void *, long, void *), void *arg,
 }
 
 
-static bool isSorted(AXvector *v) {
+static bool isSorted(axvector *v) {
     for (ulong i = 1; i < v->len; ++i) {
         if (v->comp(v->items + i - 1, v->items + i) != 0) {
             return false;
@@ -467,13 +467,13 @@ static bool isSorted(AXvector *v) {
 }
 
 
-static AXvector *sort(AXvector *v) {
+static axvector *sort(axvector *v) {
     qsort(v->items, v->len, sizeof *v->items, v->comp);
     return v;
 }
 
 
-static AXvector *sortSection(AXvector *v, long index1, long index2) {
+static axvector *sortSection(axvector *v, long index1, long index2) {
     ulong i1 = normaliseIndex(v->len, index1).u;
     ulong i2 = normaliseIndex(v->len, index2).u;
     qsort(v->items + i1, i2 - i1, sizeof *v->items, v->comp);
@@ -481,13 +481,13 @@ static AXvector *sortSection(AXvector *v, long index1, long index2) {
 }
 
 
-static long binarySearch(AXvector *v, void *val) {
+static long binarySearch(axvector *v, void *val) {
     void **found = bsearch(&val, v->items, v->len, sizeof *v->items, v->comp);
     return found ? found - v->items : -1;
 }
 
 
-static long linearSearch(AXvector *v, void *val) {
+static long linearSearch(axvector *v, void *val) {
     const long length = len(v);
     for (long i = 0; i < length; ++i) {
         if (v->comp(&val, v->items + i) == 0) {
@@ -499,7 +499,7 @@ static long linearSearch(AXvector *v, void *val) {
 }
 
 
-static long linearSearchSection(AXvector *v, void *val, long index1, long index2) {
+static long linearSearchSection(axvector *v, void *val, long index1, long index2) {
     long i1 = normaliseIndex(v->len, index1).s;
     long i2 = normaliseIndex(v->len, index2).s;
     if (i1 >= len(v) || i2 > len(v) || i1 < 0 || i2 < 0)
@@ -515,59 +515,59 @@ static long linearSearchSection(AXvector *v, void *val, long index1, long index2
 }
 
 
-static AXvector *setComparator(AXvector *v, int (*comp)(const void *, const void *)) {
+static axvector *setComparator(axvector *v, int (*comp)(const void *, const void *)) {
     v->comp = comp ? comp : defaultComparator;
     return v;
 }
 
 
-static int (*getComparator(AXvector *v))(const void *, const void *) {
+static int (*getComparator(axvector *v))(const void *, const void *) {
     return v->comp;
 }
 
 
-static AXvector *setDestructor(AXvector *v, void (*destroy)(void *)) {
+static axvector *setDestructor(axvector *v, void (*destroy)(void *)) {
     v->destroy = destroy;
     return v;
 }
 
 
-static void (*getDestructor(AXvector *v))(void *) {
+static void (*getDestructor(axvector *v))(void *) {
     return v->destroy;
 }
 
 
-static AXvector *setContext(AXvector *v, void *userdata) {
+static axvector *setContext(axvector *v, void *userdata) {
     v->context = userdata;
     return v;
 }
 
 
-static void *getContext(AXvector *v) {
+static void *getContext(axvector *v) {
     return v->context;
 }
 
 
-static void **data(AXvector *v) {
+static void **data(axvector *v) {
     return v->items;
 }
 
 
-static long len(AXvector *v) {
+static long len(axvector *v) {
     union Long len = {v->len};
     len.u = len.u << 1 >> 1;
     return len.s;
 }
 
 
-static long cap(AXvector *v) {
+static long cap(axvector *v) {
     union Long cap = {v->cap};
     cap.u = cap.u << 1 >> 1;
     return cap.s;
 }
 
 
-const struct AXvectorFuncs axv = {
+const struct axvectorFn axv = {
         sizedNew,
         new,
         destroy,
