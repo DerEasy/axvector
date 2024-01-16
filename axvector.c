@@ -27,6 +27,10 @@ union Long {
 };
 
 
+static long len(AXvector *v);
+static bool resize(AXvector *v, ulong size);
+
+
 static ulong toItemSize(ulong n) {
     return n * sizeof(void *);
 }
@@ -177,7 +181,6 @@ static AXvector *rotate(AXvector *v, long n) {
 }
 
 
-static bool resize(AXvector *v, ulong size);
 static bool shift(AXvector *v, long index, unsigned long n) {
     if (n == 0)
         return false;
@@ -186,6 +189,18 @@ static bool shift(AXvector *v, long index, unsigned long n) {
 
     memmove(v->items + index + n, v->items + index, toItemSize(v->len - n - 1));
     return false;
+}
+
+
+static long discard(AXvector *v, long n) {
+    const long removed = n = MIN(len(v), n);
+
+    if (v->destroy) while (n > 0) {
+        v->destroy(v->items[v->len - n--]);
+    }
+
+    v->len -= removed;
+    return removed;
 }
 
 
@@ -212,7 +227,6 @@ static AXvector *copy(AXvector *v) {
 }
 
 
-static long len(AXvector *v);
 static AXvector *slice(AXvector *v, long index1, long index2) {
     long i1 = index1 + (index1 < 0) * len(v);
     long i2 = index2 + (index2 < 0) * len(v);
@@ -355,7 +369,8 @@ static AXvector *map(AXvector *v, void *(*f)(void *)) {
     void **bound = v->items + v->len;
 
     while (val < bound) {
-        *val = f(*val); ++val;
+        *val = f(*val);
+        ++val;
     }
 
     return v;
@@ -424,7 +439,7 @@ static void *rforeach(AXvector *v, bool (*f)(void *, long, void *), void *arg) {
 }
 
 
-static AXvector *forSection(AXvector *v, bool (*f)(void *, long, void *), void *arg,
+static void *forSection(AXvector *v, bool (*f)(void *, long, void *), void *arg,
                             long index1, long index2) {
 
     long i1 = normaliseIndex(v->len, index1).s;
@@ -437,7 +452,7 @@ static AXvector *forSection(AXvector *v, bool (*f)(void *, long, void *), void *
         }
     }
 
-    return v;
+    return arg;
 }
 
 
@@ -500,14 +515,6 @@ static long linearSearchSection(AXvector *v, void *val, long index1, long index2
 }
 
 
-static bool element(AXvector *v, void *val, bool sorted) {
-    if (sorted)
-        return binarySearch(v, val) >= 0;
-    else
-        return linearSearch(v, val) >= 0;
-}
-
-
 static AXvector *setComparator(AXvector *v, int (*comp)(const void *, const void *)) {
     v->comp = comp ? comp : defaultComparator;
     return v;
@@ -560,7 +567,7 @@ static long cap(AXvector *v) {
 }
 
 
-const AXvectorFuncs axv = {
+const struct AXvectorFuncs axv = {
         sizedNew,
         new,
         destroy,
@@ -575,6 +582,7 @@ const AXvectorFuncs axv = {
         reverseSection,
         rotate,
         shift,
+        discard,
         clear,
         copy,
         slice,
@@ -599,7 +607,6 @@ const AXvectorFuncs axv = {
         binarySearch,
         linearSearch,
         linearSearchSection,
-        element,
         setComparator,
         getComparator,
         setDestructor,

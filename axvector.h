@@ -11,7 +11,7 @@
     AXvector is a dynamic vector/array library that has some functional programming concepts and some useful utility
     functions built in. It is designed in an OOP style. All functions are accessed through the global variable axv.
 
-    For this, a comparator function is used. The default comparator compares the addresses of items, but a custom
+    Some functions use a comparator. The default comparator compares the addresses of items, but a custom
     comparator can be given and shall conform to the C standard library's comparison function specifications.
 
     A destructor function may also be supplied. There is no default destructor. The destructor will be called on items
@@ -28,16 +28,17 @@
 */
 typedef struct AXvector AXvector;
 
-typedef struct AXvectorFuncs {
-    // create AXvector with given size
+// this struct contains all user-visible functions of the AXvector library
+struct AXvectorFuncs {
+    // create AXvector with given size, returns NULL iff OOM
     AXvector *(*sizedNew)(unsigned long size);
-    // create AXvector with default size
+    // create AXvector with default size, returns NULL iff OOM
     AXvector *(*new)(void);
     // call destructor on all items if available, then destroy AXvector and return context
     void *(*destroy)(AXvector *v);
     // push item at end of vector, true iff OOM
     bool (*push)(AXvector *v, void *val);
-    // pop item at end of vector
+    // pop item at end of vector; destructor not called
     void *(*pop)(AXvector *v);
     // get topmost item without removing
     void *(*top)(AXvector *v);
@@ -45,19 +46,22 @@ typedef struct AXvectorFuncs {
     long (*len)(AXvector *v);
     // index and return item
     void *(*at)(AXvector *v, long index);
-    // set item at index, true iff out of range
+    // set item at index, true iff out of range; destructor not called
     bool (*set)(AXvector *v, long index, void *val);
-    // swap two items by index
+    // swap two items by index, true iff index out of range
     bool (*swap)(AXvector *v, long index1, long index2);
-    // reverse order of items
+    // reverse order of items, return this vector
     AXvector *(*reverse)(AXvector *v);
     // reverse a section of items, true iff out of range
     bool (*reverseSection)(AXvector *v, long index1, long index2);
-    // rotate vector items by n places to the right; negative n rotates left
+    // rotate vector items by n places to the right; negative n rotates left; returns this vector
     AXvector *(*rotate)(AXvector *v, long n);
-    // shift all items starting at index to the right by n places, true iff OOM
+    // shift all items starting at index to the right by n places, true iff OOM.
+    // This function is also useful to reserve indexable space
     bool (*shift)(AXvector *v, long index, unsigned long n);
-    // call destructor on all items if available. then remove all items
+    // call destructor on the top n items if available, then remove those items
+    long (*discard)(AXvector *v, long n);
+    // call destructor on all items if available, then remove all items; returns this vector
     AXvector *(*clear)(AXvector *v);
     // return a copy of this AXvector (destructor not copied); NULL iff OOM
     AXvector *(*copy)(AXvector *v);
@@ -68,7 +72,7 @@ typedef struct AXvectorFuncs {
     // set capacity to some value thereby calling the destructor on excess items when shrinking. True iff OOM,
     // changing length of vector and calling of destructors is done regardless of fail or not
     bool (*resize)(AXvector *v, unsigned long size);
-    // call destructor if available on item
+    // call this vector's destructor if available on item, return this vector
     AXvector *(*destroyItem)(AXvector *v, void *val);
     // return max item through linear search; NULL if empty
     void *(*max)(AXvector *v);
@@ -83,27 +87,29 @@ typedef struct AXvectorFuncs {
     // compares two AXvectors' contents with the first vector's comparator;
     // true iff vectors have same length and all items compare equal
     bool (*compare)(AXvector *v1, AXvector *v2);
-    // map function f to all items; f returns a value that will overwrite the item at the current index
+    // map function f to all items; f returns a value that will overwrite the item at the current index;
+    // returns this vector
     AXvector *(*map)(AXvector *v, void *(*f)(void *));
-    // only keep items that satisfy condition f and call destructor on all other items
+    // only keep items that satisfy condition f and call destructor on all other items; returns this vector
     AXvector *(*filter)(AXvector *v, bool (*f)(const void *));
-    // only keep items that satisfy condition f and return a new AXvector containing all other items
+    // only keep items that satisfy condition f and return a new AXvector containing all other items;
+    // returns the new vector or NULL iff OOM
     AXvector *(*filterSplit)(AXvector *v, bool (*f)(const void *));
     // call f(x, i, arg) for every item x at index i with user-supplied argument arg
-    // until f returns false or all items have been exhausted
+    // until f returns false or all items have been exhausted. Returns arg
     void *(*foreach)(AXvector *v, bool (*f)(void *, long, void *), void *arg);
     // call f(x, i, arg) for every item x at index i with user-supplied argument arg in reverse order
-    // until f returns false or all items have been exhausted
+    // until f returns false or all items have been exhausted. Returns arg
     void *(*rforeach)(AXvector *v, bool (*f)(void *, long, void *), void *arg);
     // call f(x, i, arg) for every item x at index i with user-supplied argument arg for some given section
-    // until f returns false or all items have been exhausted
-    AXvector *(*forSection)(AXvector *v, bool (*f)(void *, long, void *), void *arg,
+    // until f returns false or all items have been exhausted. Returns arg
+    void *(*forSection)(AXvector *v, bool (*f)(void *, long, void *), void *arg,
                             long index1, long index2);
     // true iff all items in order according to comparator
     bool (*isSorted)(AXvector *v);
-    // sort vector using comparator
+    // sort vector using comparator, return vector
     AXvector *(*sort)(AXvector *v);
-    // sort some section using comparator
+    // sort some section using comparator, return this vector
     AXvector *(*sortSection)(AXvector *v, long index1, long index2);
     // return index of some item that compares equal to the passed value using comparator and binary search
     // or -1 if item not found. Items must be sorted!
@@ -114,27 +120,24 @@ typedef struct AXvectorFuncs {
     // return index of first item that compares equal to the passed value using comparator and linear search
     // in some section or -1 if item not found in that section
     long (*linearSearchSection)(AXvector *v, void *val, long index1, long index2);
-    // true iff some item compares equal to passed value according to comparator. Passing true for the sorted
-    // parameter will use binary instead of linear search
-    bool (*element)(AXvector *v, void *val, bool sorted);
-    // set comparator function (passing NULL will activate default comparator)
+    // set comparator function (passing NULL will activate default comparator); returns this vector
     AXvector *(*setComparator)(AXvector *v, int (*comp)(const void *, const void *));
-    // get comparator function
+    // get comparator function [type: int (*)(const void *, const void *)]
     int (*(*getComparator)(AXvector *v))(const void *, const void *);
-    // set destructor function (passing NULL will disable destructor)
+    // set destructor function (passing NULL will disable destructor);
     AXvector *(*setDestructor)(AXvector *v, void (*destroy)(void *));
-    // get destructor function
+    // get destructor function [type: void (*)(void *)]
     void (*(*getDestructor)(AXvector *v))(void *);
     // set context
-    AXvector *(*setContext)(AXvector *v, void *userdata);
+    AXvector *(*setContext)(AXvector *v, void *context);
     // get context
     void *(*getContext)(AXvector *v);
     // pointer to first item for direct access
     void **(*data)(AXvector *v);
     // capacity (number of items that can fit without resizing) in this AXvector
     long (*cap)(AXvector *v);
-} AXvectorFuncs;
+};
 
-extern const AXvectorFuncs axv;
+extern const struct AXvectorFuncs axv;
 
 #endif //AXVECTOR_AXVECTOR_H
