@@ -31,6 +31,13 @@ static long len(axvector *v);
 static bool resize(axvector *v, ulong size);
 
 
+static union Long normaliseIndex(ulong len, long index) {
+    union Long i = {.s = index};
+    i.u += (i.s < 0) * len;
+    return i;
+}
+
+
 static ulong toItemSize(ulong n) {
     return n * sizeof(void *);
 }
@@ -79,6 +86,15 @@ static void *destroy(axvector *v) {
 }
 
 
+static axvsnap snapshot(axvector *v) {
+    return (axvsnap) {
+        .i = 0,
+        .len = len(v),
+        .vec = v->items
+    };
+}
+
+
 static bool push(axvector *v, void *val) {
     if (v->len >= v->cap) {
         ulong cap = (v->cap << 1) | 1;  // add another bit
@@ -103,10 +119,10 @@ static void *top(axvector *v) {
 }
 
 
-static union Long normaliseIndex(ulong len, long index) {
-    union Long i = {.s = index};
-    i.u += (i.s < 0) * len;
-    return i;
+static long len(axvector *v) {
+    union Long len = {v->len};
+    len.u = len.u << 1 >> 1;
+    return len.s;
 }
 
 
@@ -553,13 +569,6 @@ static void **data(axvector *v) {
 }
 
 
-static long len(axvector *v) {
-    union Long len = {v->len};
-    len.u = len.u << 1 >> 1;
-    return len.s;
-}
-
-
 static long cap(axvector *v) {
     union Long cap = {v->cap};
     cap.u = cap.u << 1 >> 1;
@@ -575,6 +584,7 @@ const struct axvectorFn axv = {
         sizedNew,
         new,
         destroy,
+        snapshot,
         push,
         pop,
         top,

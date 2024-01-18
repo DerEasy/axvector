@@ -28,6 +28,21 @@
 */
 typedef struct axvector axvector;
 
+/*
+    Snapshots capture the current state of an axvector for iteration purposes. A snapshot consists of an index
+    initialised to 0, the current length and a pointer to the first item.
+
+    Snapshots are the quickest way of iterating a vector, but they do not update their state, so the programmer must
+    be wary of not invalidating the snapshot.
+
+    Consider using the provided higher-order functions instead if this is not a tight loop.
+*/
+typedef struct axvsnap {
+    long i;         // index (initialised to 0), increment this in your loop
+    long len;       // length of vector at time of taking snapshot, best not to change manually
+    void **vec;     // pointer to first element at time of taking snapshot, best not to change manually
+} axvsnap;
+
 // this struct contains all user-visible functions of the axvector library
 struct axvectorFn {
     // create axvector with given size, returns NULL iff OOM
@@ -36,13 +51,16 @@ struct axvectorFn {
     axvector *(*new)(void);
     // call destructor on all items if available, then destroy axvector and return context
     void *(*destroy)(axvector *v);
+    // returns a snapshot of this vector
+    axvsnap (*snapshot)(axvector *v);
     // push item at end of vector, true iff OOM
     bool (*push)(axvector *v, void *val);
     // pop item at end of vector; destructor not called
     void *(*pop)(axvector *v);
     // get topmost item without removing
     void *(*top)(axvector *v);
-    // length (number of items) in this axvector
+    // length (number of items) in this axvector. It's advised not to use this function in a tight loop and
+    // consider the use of snapshots or higher-order functions such as foreach() instead
     long (*len)(axvector *v);
     // index and return item
     void *(*at)(axvector *v, long index);
