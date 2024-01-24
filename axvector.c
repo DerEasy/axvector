@@ -553,8 +553,8 @@ static void (*getDestructor(axvector *v))(void *) {
 }
 
 
-static axvector *setContext(axvector *v, void *userdata) {
-    v->context = userdata;
+static axvector *setContext(axvector *v, void *context) {
+    v->context = context;
     return v;
 }
 

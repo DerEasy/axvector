@@ -9,15 +9,16 @@
 
 /*
     axvector is a dynamic vector/array library that has some functional programming concepts and some useful utility
-    functions built in. It is designed in an OOP style. All functions are accessed through the global variable axv.
+    functions built in. It's designed in an OO-esque style. All functions are accessed through the global variable axv.
+    This variable acts as a pseudo-namespace and may be renamed by defining a global macro AXVECTOR_NAMESPACE.
 
     Some functions use a comparator. The default comparator compares the addresses of items, but a custom
     comparator can be given and shall conform to the C standard library's comparison function specifications.
 
     A destructor function may also be supplied. There is no default destructor. The destructor will be called on items
-    that are *irrevocably* removed from the vector. It's prototype is void (*)(void *), like the free() function.
+    that are _irrevocably_ removed from the vector. Its prototype is void (*)(void *), like the free() function.
 
-    To provide built-in flexibility, the vector also has storage for a context. This is simply a void *. The context is
+    To provide built-in bookkeeping, the vector also has storage for a context. This is simply a void *. The context is
     not used by the vector itself and is exclusively controlled by the user.
 
     All functions on axvector return something. If the meaning of a function doesn't allow for any sensible return
@@ -96,13 +97,13 @@ struct axvectorFn {
     void *(*max)(axvector *v);
     // return min item through linear search; NULL if empty
     void *(*min)(axvector *v);
-    // true iff f(x) for any item x, false if axvector empty. Stops at first true return value
+    // false iff f(x) for no item x or axvector empty. Stops at first true return value
     bool (*any)(axvector *v, bool (*f)(const void *));
     // true iff f(x) for all items x or axvector empty. Stops at first false return value
     bool (*all)(axvector *v, bool (*f)(const void *));
     // number of items that compare equal to passed value according to comparator
     long (*count)(axvector *v, void *val);
-    // compares two AXvectors' contents with the first vector's comparator;
+    // compares two axvectors' contents with the first vector's comparator;
     // true iff vectors have same length and all items compare equal
     bool (*compare)(axvector *v1, axvector *v2);
     // map function f to all items; f returns a value that will overwrite the item at the current index;
