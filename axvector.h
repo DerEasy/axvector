@@ -52,6 +52,12 @@ struct axvectorFn {
     axvector *(*new)(void);
     // call destructor on all items if available, then destroy axvector and return context
     void *(*destroy)(axvector *v);
+    // increment reference counter. This function is not thread-safe
+    axvector *(*iref)(axvector *v);
+    // decrement reference counter. Returns whether the axvector has been destroyed. This function is not thread-safe
+    bool (*dref)(axvector *v);
+    // reference counter state
+    long (*refs)(axvector *v);
     // returns a snapshot of this vector
     axvsnap (*snapshot)(axvector *v);
     // push item at end of vector, true iff OOM

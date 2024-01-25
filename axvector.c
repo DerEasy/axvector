@@ -18,6 +18,7 @@ struct axvector {
     int (*comp)(const void *, const void *);
     void (*destroy)(void *);
     void *context;
+    long refcount;
 };
 
 
@@ -65,6 +66,7 @@ static axvector *sizedNew(ulong size) {
     v->comp = defaultComparator;
     v->context = NULL;
     v->destroy = NULL;
+    v->refcount = 1;
     return v;
 }
 
@@ -83,6 +85,24 @@ static void *destroy(axvector *v) {
     free(v->items);
     free(v);
     return context;
+}
+
+
+static axvector *iref(axvector *v) {
+    ++v->refcount;
+    return v;
+}
+
+
+static bool dref(axvector *v) {
+    const bool destroyed = --v->refcount <= 0;
+    if (destroyed) destroy(v);
+    return destroyed;
+}
+
+
+static long refs(axvector *v) {
+    return v->refcount;
 }
 
 
@@ -584,6 +604,9 @@ const struct axvectorFn axv = {
         sizedNew,
         new,
         destroy,
+        iref,
+        dref,
+        refs,
         snapshot,
         push,
         pop,
