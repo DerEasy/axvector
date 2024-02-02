@@ -162,7 +162,7 @@ static bool set(axvector *v, long index, void *val) {
 
 static bool swap(axvector *v, long index1, long index2) {
     ulong i1 = normaliseIndex(v->len, index1).u;
-    ulong i2 = normaliseIndex(v->len, index2).u - 1;
+    ulong i2 = normaliseIndex(v->len, index2).u;
     if (i1 >= v->len || i2 >= v->len)
         return true;
 
@@ -413,12 +413,12 @@ static axvector *map(axvector *v, void *(*f)(void *)) {
 }
 
 
-static axvector *filter(axvector *v, bool (*f)(const void *)) {
+static axvector *filter(axvector *v, bool (*f)(const void *, void *), void *arg) {
     ulong len = 0;
     const bool shouldFree = v->destroy;
 
     for (ulong i = 0; i < v->len; ++i) {
-        if (f(v->items[i])) {
+        if (f(v->items[i], arg)) {
             v->items[len++] = v->items[i];
         } else if (shouldFree) {
             v->destroy(v->items[i]);
@@ -430,13 +430,13 @@ static axvector *filter(axvector *v, bool (*f)(const void *)) {
 }
 
 
-static axvector *filterSplit(axvector *v, bool (*f)(const void *)) {
+static axvector *filterSplit(axvector *v, bool (*f)(const void *, void *), void *arg) {
     axvector *v2 = sizedNew(v->len);
     if (!v2) return NULL;
 
     ulong len1 = 0, len2 = 0;
     for (ulong i = 0; i < v->len; ++i) {
-        if (f(v->items[i])) {
+        if (f(v->items[i], arg)) {
             v->items[len1++] = v->items[i];
         } else {
             v2->items[len2++] = v->items[i];

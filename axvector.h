@@ -116,10 +116,10 @@ struct axvectorFn {
     // returns this vector
     axvector *(*map)(axvector *v, void *(*f)(void *));
     // only keep items that satisfy condition f and call destructor on all other items; returns this vector
-    axvector *(*filter)(axvector *v, bool (*f)(const void *));
+    axvector *(*filter)(axvector *v, bool (*f)(const void *, void *), void *arg);
     // only keep items that satisfy condition f and return a new axvector containing all other items;
     // returns the new vector or NULL iff OOM
-    axvector *(*filterSplit)(axvector *v, bool (*f)(const void *));
+    axvector *(*filterSplit)(axvector *v, bool (*f)(const void *, void *), void *arg);
     // call f(x, i, arg) for every item x at index i with user-supplied argument arg
     // until f returns false or all items have been exhausted. Returns arg
     void *(*foreach)(axvector *v, bool (*f)(void *, long, void *), void *arg);
