@@ -81,15 +81,25 @@ struct axvectorFn {
     bool (*reverseSection)(axvector *v, long index1, long index2);
     // rotate vector items by n places to the right; negative n rotates left; returns this vector
     axvector *(*rotate)(axvector *v, long n);
-    // shift all items starting at index to the right by n places, true iff OOM.
-    // This function is also useful to reserve indexable space
-    bool (*shift)(axvector *v, long index, unsigned long n);
+    // if n > 0, shift items starting at index right by n places, zero out memory in-between, true iff OOM.
+    // if n < 0, let m = -n: remove (and possibly destruct) m items starting at index and shift subsequent elements
+    // by m places to the left.
+    // This function is useful to reserve indexable space (n > 0) or to remove items in the middle (n < 0)
+    // shift([0 1 2 3 4 5 6], 2, +3) = [0 1 0 0 0 2 3 4 5 6]
+    // shift([0 1 2 3 4 5 6], 2, -3) = [0 1 5 6]
+    bool (*shift)(axvector *v, long index, long n);
     // call destructor on the top n items if available, then remove those items
     long (*discard)(axvector *v, long n);
     // call destructor on all items if available, then remove all items; returns this vector
     axvector *(*clear)(axvector *v);
     // return a copy of this axvector (destructor not copied); NULL iff OOM
     axvector *(*copy)(axvector *v);
+    // append all items of second vector to first vector, thereby clearing the second vector.
+    // No destructors are called. Does nothing when vectors are the same. True iff OOM
+    bool (*extend)(axvector *v1, axvector *v2);
+    // concatenate all items of second vector to first vector, with no changes to second vector.
+    // True iff OOM
+    bool (*concat)(axvector *v1, axvector *v2);
     // return a copy of a section of this axvector (destructor not copied); NULL iff OOM
     axvector *(*slice)(axvector *v, long index1, long index2);
     // return a copy of a section of this axvector in reverse order (destructor not copied); NULL iff OOM
@@ -120,15 +130,15 @@ struct axvectorFn {
     // only keep items that satisfy condition f and return a new axvector containing all other items;
     // returns the new vector or NULL iff OOM
     axvector *(*filterSplit)(axvector *v, bool (*f)(const void *, void *), void *arg);
-    // call f(x, i, arg) for every item x at index i with user-supplied argument arg
+    // call f(x, arg) for every item x  with user-supplied argument arg
     // until f returns false or all items have been exhausted. Returns arg
-    void *(*foreach)(axvector *v, bool (*f)(void *, long, void *), void *arg);
-    // call f(x, i, arg) for every item x at index i with user-supplied argument arg in reverse order
+    axvector *(*foreach)(axvector *v, bool (*f)(void *, void *), void *arg);
+    // call f(x, arg) for every item x with user-supplied argument arg in reverse order
     // until f returns false or all items have been exhausted. Returns arg
-    void *(*rforeach)(axvector *v, bool (*f)(void *, long, void *), void *arg);
-    // call f(x, i, arg) for every item x at index i with user-supplied argument arg for some given section
+    axvector *(*rforeach)(axvector *v, bool (*f)(void *, void *), void *arg);
+    // call f(x, arg) for every item x with user-supplied argument arg for some given section
     // until f returns false or all items have been exhausted. Returns arg
-    void *(*forSection)(axvector *v, bool (*f)(void *, long, void *), void *arg,
+    axvector *(*forSection)(axvector *v, bool (*f)(void *, void *), void *arg,
                         long index1, long index2);
     // true iff all items in order according to comparator
     bool (*isSorted)(axvector *v);
