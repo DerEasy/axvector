@@ -44,8 +44,8 @@ static uint64_t toItemSize(uint64_t n) {
 
 
 static int defaultComparator(const void *a, const void *b) {
-    const void *x = *(void **) a;
-    const void *y = *(void **) b;
+    const void *x = *(const void **) a;
+    const void *y = *(const void **) b;
     return (x > y) - (x < y);
 }
 
@@ -139,8 +139,7 @@ static void *top(axvector *v) {
 
 
 static int64_t len(axvector *v) {
-    union Int64 len = {v->len};
-    return len.s;
+    return (const union Int64) {v->len}.s;
 }
 
 
@@ -188,12 +187,12 @@ static axvector *reverse(axvector *v) {
 
 static bool reverseSection(axvector *v, int64_t index1, int64_t index2) {
     uint64_t i1 = normaliseIndex(v->len, index1).u;
-    uint64_t i2 = normaliseIndex(v->len, index2).u - 1;
-    if (i1 >= v->len || i2 >= v->len)
+    uint64_t i2 = normaliseIndex(v->len, index2).u;
+    if (i1 >= v->len || i2 > v->len)
         return true;
 
     void **l = v->items + i1;
-    void **r = v->items + i2;
+    void **r = v->items + i2 - 1;
 
     while (l < r) {
         void *tmp = *l;
@@ -207,10 +206,11 @@ static bool reverseSection(axvector *v, int64_t index1, int64_t index2) {
 
 
 static axvector *rotate(axvector *v, int64_t n) {
+    n %= len(v);
     if (n == 0) return v;
     reverse(v);
-    reverseSection(v, 0, n - 1);
-    reverseSection(v, n, -1);
+    reverseSection(v, 0, n);
+    reverseSection(v, n, len(v));
     return v;
 }
 
@@ -393,24 +393,24 @@ static void *min(axvector *v) {
 }
 
 
-static bool any(axvector *v, bool (*f)(const void *)) {
+static bool any(axvector *v, bool (*f)(const void *, void *), void *arg) {
     void **val = v->items;
     void **bound = v->items + v->len;
 
     while (val < bound) {
-        if (f(*val++)) return true;
+        if (f(*val++, arg)) return true;
     }
 
     return false;
 }
 
 
-static bool all(axvector *v, bool (*f)(const void *)) {
+static bool all(axvector *v, bool (*f)(const void *, void *), void *arg) {
     void **val = v->items;
     void **bound = v->items + v->len;
 
     while (val < bound) {
-        if (!f(*val++)) return false;
+        if (!f(*val++, arg)) return false;
     }
 
     return true;
@@ -629,8 +629,7 @@ static void **data(axvector *v) {
 
 
 static int64_t cap(axvector *v) {
-    union Int64 cap = {v->cap};
-    return cap.s;
+    return (const union Int64) {v->cap}.s;
 }
 
 

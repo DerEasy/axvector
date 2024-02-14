@@ -114,10 +114,10 @@ struct axvectorFn {
     void *(*max)(axvector *v);
     // return min item through linear search; NULL if empty
     void *(*min)(axvector *v);
-    // false iff f(x) for no item x or axvector empty. Stops at first true return value
-    bool (*any)(axvector *v, bool (*f)(const void *));
-    // true iff f(x) for all items x or axvector empty. Stops at first false return value
-    bool (*all)(axvector *v, bool (*f)(const void *));
+    // false iff f(x, arg) for no item x or axvector empty. Stops at first true return value
+    bool (*any)(axvector *v, bool (*f)(const void *, void *), void *arg);
+    // true iff f(x, arg) for all items x or axvector empty. Stops at first false return value
+    bool (*all)(axvector *v, bool (*f)(const void *, void *), void *arg);
     // number of items that compare equal to passed value according to comparator
     int64_t (*count)(axvector *v, void *val);
     // compares two axvectors' contents with the first vector's comparator;
