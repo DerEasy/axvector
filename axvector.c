@@ -201,12 +201,12 @@ bool axv_reverseSection(axvector *v, int64_t index1, int64_t index2) {
 }
 
 
-axvector *axv_rotate(axvector *v, int64_t n) {
-    n %= axv_len(v);
-    if (n == 0) return v;
+axvector *axv_rotate(axvector *v, int64_t k) {
+    k %= axv_len(v);
+    if (k == 0) return v;
     axv_reverse(v);
-    axv_reverseSection(v, 0, n);
-    axv_reverseSection(v, n, axv_len(v));
+    axv_reverseSection(v, 0, k);
+    axv_reverseSection(v, k, axv_len(v));
     return v;
 }
 
@@ -237,15 +237,14 @@ bool axv_shift(axvector *v, int64_t index, int64_t n) {
 }
 
 
-int64_t axv_discard(axvector *v, int64_t n) {
-    const int64_t removed = n = MIN(axv_len(v), n);
+axvector *axv_discard(axvector *v, uint64_t n) {
+    n = v->len - MIN(v->len, n);
 
-    if (v->destroy) while (n > 0) {
-        v->destroy(v->items[v->len - n--]);
+    if (v->destroy) while (v->len > n) {
+        v->destroy(v->items[--v->len]);
     }
 
-    v->len -= removed;
-    return removed;
+    return v;
 }
 
 
@@ -627,62 +626,3 @@ void **axv_data(axvector *v) {
 int64_t axv_cap(axvector *v) {
     return (const union Int64) {v->cap}.s;
 }
-
-
-/*
-const struct axvectorFn axv = {
-        axv_sizedNew,
-        axv_new,
-        axv_destroy,
-        axv_iref,
-        axv_dref,
-        axv_refs,
-        axv_snapshot,
-        push,
-        pop,
-        top,
-        axv_len,
-        at,
-        set,
-        swap,
-        axv_reverse,
-        axv_reverseSection,
-        rotate,
-        shift,
-        discard,
-        clear,
-        axv_copy,
-        extend,
-        concat,
-        slice,
-        rslice,
-        axv_resize,
-        axv_destroyItem,
-        max,
-        min,
-        any,
-        all,
-        count,
-        compare,
-        map,
-        filter,
-        filterSplit,
-        foreach,
-        rforeach,
-        forSection,
-        isSorted,
-        sort,
-        sortSection,
-        binarySearch,
-        linearSearch,
-        linearSearchSection,
-        setComparator,
-        getComparator,
-        setDestructor,
-        getDestructor,
-        setContext,
-        getContext,
-        data,
-        cap
-};
-*/
