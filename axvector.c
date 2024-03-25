@@ -490,22 +490,22 @@ axvector *axv_foreach(axvector *v, bool (*f)(void *, void *), void *arg) {
     const int64_t length = axv_len(v);
     for (int64_t i = 0; i < length; ++i) {
         if (!f(v->items[i], arg)) {
-            return arg;
+            return v;
         }
     }
 
-    return arg;
+    return v;
 }
 
 
 axvector *axv_rforeach(axvector *v, bool (*f)(void *, void *), void *arg) {
     for (int64_t i = axv_len(v) - 1; i >= 0; --i) {
         if (!f(v->items[i], arg)) {
-            return arg;
+            return v;
         }
     }
 
-    return arg;
+    return v;
 }
 
 
@@ -522,7 +522,7 @@ axvector *axv_forSection(axvector *v, bool (*f)(void *, void *), void *arg,
         }
     }
 
-    return arg;
+    return v;
 }
 
 
