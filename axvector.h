@@ -60,21 +60,6 @@ axvector *axv_new(void);
  */
 void *axv_destroy(axvector *v);
 /**
- * Increment reference counter. Not thread-safe.
- * @return Self.
- */
-axvector *axv_iref(axvector *v);
-/**
- * Decrement reference counter. Not thread-safe. Vector is destroyed if no references are held thereafter.
- * @return True iff vector has been destroyed.
- */
-bool axv_dref(axvector *v);
-/**
- * Amount of references held on this vector.
- * @return Reference count.
- */
-int64_t axv_refs(axvector *v);
-/**
  * Create a snapshot of this vector. Snapshots are not heap-allocated, thus must not be freed.
  * @return Snapshot.
  */
