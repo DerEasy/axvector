@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 /*
     axvector is a dynamic vector/array library that has some functional programming concepts and some useful utility
@@ -106,6 +107,12 @@ int64_t axv_len(axvector *v);
  * @return Item at index or NULL if index out of range.
  */
 void *axv_at(axvector *v, int64_t index);
+/**
+ * Index vector directly and return item.
+ * @param index Must be positive. No negative indexing allowed.
+ * @return Item at index or NULL if index out of range.
+ */
+void *axv_get(axvector *v, uint64_t index);
 /**
  * Replace item at index with a new item.
  * @param index May be negative.
