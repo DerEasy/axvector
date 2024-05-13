@@ -3,21 +3,10 @@
 //
 
 #include "axvector.h"
-#include <stdlib.h>
 #include <string.h>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
-
-
-struct axvector {
-    void **items;
-    uint64_t len;
-    uint64_t cap;
-    int (*cmp)(const void *, const void *);
-    void (*destroy)(void *);
-    void *context;
-};
 
 
 union Int64 {
@@ -76,55 +65,6 @@ void *axv_destroy(axvector *v) {
     free(v->items);
     free(v);
     return context;
-}
-
-
-axvsnap axv_snapshot(axvector *v) {
-    return (axvsnap) {
-        .i = 0,
-        .len = axv_len(v),
-        .vec = v->items
-    };
-}
-
-
-bool axv_push(axvector *v, void *val) {
-    if (v->len >= v->cap) {
-        uint64_t cap = (v->cap << 1) | 1;  // add another bit
-        void **items = realloc(v->items, toItemSize(cap));
-        if (!items)
-            return true;
-        v->items = items;
-        v->cap = cap;
-    }
-    v->items[v->len++] = val;
-    return false;
-}
-
-
-void *axv_pop(axvector *v) {
-    return v->len ? v->items[--v->len] : NULL;
-}
-
-
-void *axv_top(axvector *v) {
-    return v->len ? v->items[v->len - 1] : NULL;
-}
-
-
-int64_t axv_len(axvector *v) {
-    return (const union Int64) {v->len}.s;
-}
-
-
-void *axv_at(axvector *v, int64_t index) {
-    uint64_t i = normaliseIndex(v->len, index).u;
-    return i < v->len ? v->items[i] : NULL;
-}
-
-
-void *axv_get(axvector *v, uint64_t index) {
-    return index < v->len ? v->items[index] : NULL;
 }
 
 
@@ -311,10 +251,12 @@ axvector *axv_rslice(axvector *v, int64_t index1, int64_t index2) {
 
 bool axv_resize(axvector *v, uint64_t size) {
     size = MAX(1, size);
-    if (size < v->len && v->destroy) while (v->len > size)
-        v->destroy(v->items[--v->len]);
-    else
+    if (size < v->len && v->destroy) {
+        while (v->len > size)
+            v->destroy(v->items[--v->len]);
+    } else {
         v->len = MIN(v->len, size);
+    }
     void **items = realloc(v->items, toItemSize(size));
     if (!items)
         return true;
@@ -492,23 +434,11 @@ bool axv_isSorted(axvector *v) {
 }
 
 
-axvector *axv_sort(axvector *v) {
-    qsort(v->items, v->len, sizeof *v->items, v->cmp);
-    return v;
-}
-
-
 axvector *axv_sortSection(axvector *v, int64_t index1, int64_t index2) {
     uint64_t i1 = normaliseIndex(v->len, index1).u;
     uint64_t i2 = normaliseIndex(v->len, index2).u;
     qsort(v->items + i1, i2 - i1, sizeof *v->items, v->cmp);
     return v;
-}
-
-
-int64_t axv_binarySearch(axvector *v, void *val) {
-    void **found = bsearch(&val, v->items, v->len, sizeof *v->items, v->cmp);
-    return found ? found - v->items : -1;
 }
 
 
@@ -538,41 +468,4 @@ int64_t axv_linearSearchSection(axvector *v, void *val, int64_t index1, int64_t 
 axvector *axv_setComparator(axvector *v, int (*cmp)(const void *, const void *)) {
     v->cmp = cmp ? cmp : defaultComparator;
     return v;
-}
-
-
-int (*axv_getComparator(axvector *v))(const void *, const void *) {
-    return v->cmp;
-}
-
-
-axvector *axv_setDestructor(axvector *v, void (*destroy)(void *)) {
-    v->destroy = destroy;
-    return v;
-}
-
-
-void (*axv_getDestructor(axvector *v))(void *) {
-    return v->destroy;
-}
-
-
-axvector *axv_setContext(axvector *v, void *context) {
-    v->context = context;
-    return v;
-}
-
-
-void *axv_getContext(axvector *v) {
-    return v->context;
-}
-
-
-void **axv_data(axvector *v) {
-    return v->items;
-}
-
-
-int64_t axv_cap(axvector *v) {
-    return (const union Int64) {v->cap}.s;
 }

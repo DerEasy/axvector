@@ -7,7 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
+#include <stdlib.h>
 
 /*
     axvector is a dynamic vector/array library that has some functional programming concepts and some useful utility
@@ -24,23 +24,18 @@
 
     axvector supports negative indexing: -1 is the last item, -2 the penultimate one etc. All functions that take
     two indices to signify a section treat the first index inclusively and the second index exclusively.
+
+    The struct definition of axvector is given in its header for optimisation purposes only. To use axvector, you must
+    rely solely on the functions of the library.
 */
-typedef struct axvector axvector;
-
-/*
-    Snapshots capture the current state of an axvector. A snapshot consists of an index initialised to 0,
-    the current length and a pointer to the first item.
-
-    Snapshots are the quickest way of iterating a vector, but they do not update their state, so the programmer must
-    be wary of not invalidating the snapshot.
-
-    Consider using the provided higher-order functions instead if this is not a very tight loop.
-*/
-typedef struct axvsnap {
-    int64_t i;         // index (initialised to 0), increment this in your loop
-    int64_t len;       // length of vector at time of taking axv_snapshot, best not to change manually
-    void **vec;        // pointer to first element at time of taking axv_snapshot, best not to change manually
-} axvsnap;
+typedef struct axvector {
+    void **items;
+    uint64_t len;
+    uint64_t cap;
+    int (*cmp)(const void *, const void *);
+    void (*destroy)(void *);
+    void *context;
+} axvector;
 
 
 /**
@@ -60,44 +55,68 @@ axvector *axv_new(void);
  */
 void *axv_destroy(axvector *v);
 /**
- * Create a snapshot of this vector. Snapshots are not heap-allocated, thus must not be freed.
- * @return Snapshot.
+ * Set capacity of vector to some value. If the new capacity is less than the length of the vector and a destructor
+ * is set, the destructor will be called on all excess items. This is done even if the resize operation itself fails.
+ * @param size New capacity.
+ * @return True iff OOM.
  */
-axvsnap axv_snapshot(axvector *v);
+bool axv_resize(axvector *v, uint64_t size);
 /**
  * Push an item at the end of the vector. Vector is automatically resized if need be.
  * @param val Item.
  * @return True iff OOM during resize operation. Item is not pushed in this case.
  */
-bool axv_push(axvector *v, void *val);
+static inline bool axv_push(axvector *v, void *val) {
+    if (v->len >= v->cap && axv_resize(v, (v->cap << 1) | 1))
+        return true;
+    v->items[v->len++] = val;
+    return false;
+}
 /**
  * Pop off (remove) the last item.
  * @return The last item.
  */
-void *axv_pop(axvector *v);
-// get topmost item without removing
+static inline void *axv_pop(axvector *v) {
+    return v->len ? v->items[--v->len] : NULL;
+}
 /**
  * Get last item without removing it.
  * @return The last item.
  */
-void *axv_top(axvector *v);
+static inline void *axv_top(axvector *v) {
+    return v->len ? v->items[v->len - 1] : NULL;
+}
 /**
- * Number of items in this vector. Consider using higher-order functions or snapshots for iteration instead.
+ * Number of items in this vector.
  * @return Length of vector.
  */
-int64_t axv_len(axvector *v);
+static inline int64_t axv_len(axvector *v) {
+    return (union {
+        uint64_t u;
+        int64_t s;
+    }) {.u = v->len}.s;
+}
 /**
  * Index vector and return item.
  * @param index May be negative.
  * @return Item at index or NULL if index out of range.
  */
-void *axv_at(axvector *v, int64_t index);
+static inline void *axv_at(axvector *v, int64_t index) {
+    union Int64 {
+        uint64_t u;
+        int64_t s;
+    } i = {.s = index};
+    i.u += (i.s < 0) * v->len;
+    return i.u < v->len ? v->items[i.u] : NULL;
+}
 /**
  * Index vector directly and return item.
  * @param index Must be positive. No negative indexing allowed.
  * @return Item at index or NULL if index out of range.
  */
-void *axv_get(axvector *v, uint64_t index);
+static inline void *axv_get(struct axvector *v, uint64_t index) {
+    return index < v->len ? v->items[index] : NULL;
+}
 /**
  * Replace item at index with a new item.
  * @param index May be negative.
@@ -192,13 +211,6 @@ axvector *axv_slice(axvector *v, int64_t index1, int64_t index2);
  * @return New axvector or NULL if OOM.
  */
 axvector *axv_rslice(axvector *v, int64_t index1, int64_t index2);
-/**
- * Set capacity of vector to some value. If the new capacity is less than the length of the vector and a destructor
- * is set, the destructor will be called on all excess items. This is done even if the resize operation itself fails.
- * @param size New capacity.
- * @return True iff OOM.
- */
-bool axv_resize(axvector *v, uint64_t size);
 /**
  * If a destructor is set, it is called on the argument. Otherwise this function does nothing.
  * @param val Value to call destructor on.
@@ -314,7 +326,10 @@ bool axv_isSorted(axvector *v);
  * Sort vector using its comparator.
  * @return Self.
  */
-axvector *axv_sort(axvector *v);
+static inline axvector *axv_sort(axvector *v) {
+    qsort(v->items, v->len, sizeof *v->items, v->cmp);
+    return v;
+}
 /**
  * Sort section of vector using its comparator.
  * @param index1 Beginning of section. May be negative. Inclusive.
@@ -327,7 +342,10 @@ axvector *axv_sortSection(axvector *v, int64_t index1, int64_t index2);
  * @param val Value to search using the vector's comparator.
  * @return Index of any item which matches the argument or -1 if no such item is found.
  */
-int64_t axv_binarySearch(axvector *v, void *val);
+static inline int64_t axv_binarySearch(axvector *v, void *val) {
+    void **found = bsearch(&val, v->items, v->len, sizeof *v->items, v->cmp);
+    return found ? found - v->items : -1;
+}
 /**
  * Linear search the argument in the vector. Forward search is used.
  * @param val Value to search using the vector's comparator.
@@ -353,40 +371,59 @@ axvector *axv_setComparator(axvector *v, int (*cmp)(const void *, const void *))
  * Get comparator function. Type is int (*)(const void *, const void *).
  * @return Comparator.
  */
-int (*axv_getComparator(axvector *v))(const void *, const void *);
+static inline int (*axv_getComparator(axvector *v))(const void *, const void *) {
+    return v->cmp;
+}
 /**
  * Set destructor function. Type must match void (*)(void *), which matches i.e. the free() function.
  * @param destroy Destructor or NULL to deactivate destructor features.
  * @return Self.
  */
-axvector *axv_setDestructor(axvector *v, void (*destroy)(void *));
+static inline axvector *axv_setDestructor(axvector *v, void (*destroy)(void *)) {
+    v->destroy = destroy;
+    return v;
+}
 /**
  * Get destructor function. Type is void (*)(void *).
  * @return Destructor or NULL if not set.
  */
-void (*axv_getDestructor(axvector *v))(void *);
+static inline void (*axv_getDestructor(axvector *v))(void *) {
+    return v->destroy;
+}
 /**
  * Store a context in the vector.
  * @param context Context.
  * @return Self.
  */
-axvector *axv_setContext(axvector *v, void *context);
+static inline axvector *axv_setContext(axvector *v, void *context) {
+    v->context = context;
+    return v;
+}
 /**
  * Get the stored context of this vector.
  * @return Context.
  */
-void *axv_getContext(axvector *v);
+static inline void *axv_getContext(axvector *v) {
+    return v->context;
+}
 /**
  * Pointer to first item of this vector. This function is useful when you need raw array access.
  * @return The internal array of this vector.
  */
-void **axv_data(axvector *v);
+static inline void **axv_data(axvector *v) {
+    return v->items;
+}
 /**
  * Capacity of this vector. The capacity is the maximum number of items that fit without the need of resizing
  * the vector.
  * @return Capacity.
  */
-int64_t axv_cap(axvector *v);
+static inline int64_t axv_cap(axvector *v) {
+    return (union {
+        uint64_t u;
+        int64_t s;
+    }) {.u = v->cap}.s;
+}
 
 
 #endif //AXVECTOR_AXVECTOR_H
