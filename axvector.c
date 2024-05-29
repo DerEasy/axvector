@@ -47,6 +47,8 @@ axvector *axv_sizedNew(uint64_t size) {
     v->cmp = defaultComparator;
     v->context = NULL;
     v->destroy = NULL;
+    v->locked = false;
+    v->overlay = false;
     return v;
 }
 
@@ -56,14 +58,31 @@ axvector *axv_new(void) {
 }
 
 
+axvector axv_newOverlay(void **items, uint64_t size, uint64_t capacity) {
+    axvector v;
+    size = MIN(size, capacity);
+    v.items = items;
+    v.len = size;
+    v.cap = capacity;
+    v.cmp = NULL;
+    v.destroy = NULL;
+    v.context = NULL;
+    v.locked = true;
+    v.overlay = true;
+    return v;
+}
+
+
 void *axv_destroy(axvector *v) {
     if (v->destroy) {
         while (v->len)
             v->destroy(v->items[--v->len]);
     }
     void *context = v->context;
-    free(v->items);
-    free(v);
+    if (!v->overlay) {
+        free(v->items);
+        free(v);
+    }
     return context;
 }
 
@@ -250,6 +269,8 @@ axvector *axv_rslice(axvector *v, int64_t index1, int64_t index2) {
 
 
 bool axv_resize(axvector *v, uint64_t size) {
+    if (v->locked)
+        return true;
     size = MAX(1, size);
     if (size < v->len && v->destroy) {
         while (v->len > size)
@@ -263,13 +284,6 @@ bool axv_resize(axvector *v, uint64_t size) {
     v->items = items;
     v->cap = size;
     return false;
-}
-
-
-axvector *axv_destroyItem(axvector *v, void *val) {
-    if (v->destroy)
-        v->destroy(val);
-    return v;
 }
 
 
@@ -366,7 +380,7 @@ axvector *axv_filter(axvector *v, bool (*f)(const void *, void *), void *arg) {
 }
 
 
-axvector *axv_filterSplit(axvector *v, bool (*f)(const void *, void *), void *arg) {
+axvector *axv_partition(axvector *v, bool (*f)(const void *, void *), void *arg) {
     axvector *v2 = axv_sizedNew(v->len);
     if (!v2) return NULL;
 
@@ -401,22 +415,6 @@ axvector *axv_foreach(axvector *v, bool (*f)(void *, void *), void *arg) {
 
 axvector *axv_rforeach(axvector *v, bool (*f)(void *, void *), void *arg) {
     for (int64_t i = axv_len(v) - 1; i >= 0; --i) {
-        if (!f(v->items[i], arg)) {
-            return v;
-        }
-    }
-    return v;
-}
-
-
-axvector *axv_forSection(axvector *v, bool (*f)(void *, void *), void *arg,
-                         int64_t index1, int64_t index2) {
-
-    int64_t i1 = normaliseIndex(v->len, index1).s;
-    int64_t i2 = normaliseIndex(v->len, index2).s;
-    i2 = MIN(axv_len(v), i2); i2 = MAX(0, i2);
-
-    for (int64_t i = i1; i < i2; ++i) {
         if (!f(v->items[i], arg)) {
             return v;
         }

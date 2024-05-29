@@ -35,6 +35,8 @@ typedef struct axvector {
     int (*cmp)(const void *, const void *);
     void (*destroy)(void *);
     void *context;
+    bool locked;
+    bool overlay;
 } axvector;
 
 
@@ -49,6 +51,18 @@ axvector *axv_sizedNew(uint64_t size);
  * @return New axvector or NULL if OOM.
  */
 axvector *axv_new(void);
+/**
+ * Create axvector as an overlay. An overlay takes an array of items, how many items are currently stored in
+ * that array and how many could potentially be stored there. A new axvector is created using that item array as
+ * its internal array. No heap allocations are made. Overlays are locked by default and do not free their internal
+ * array upon destruction. Thus, it is not strictly necessary to call axv_destroy() on an overlay, as this will
+ * only call the destructor on all items, if there is one.
+ * @param items An array of items of type void *.
+ * @param size Number of items currently stored in the items array. This must not exceed the capacity.
+ * @param capacity Number of items that could potentially be stored in the items array. Upper limit of size.
+ * @return New axvector in stack memory. If size was greater than capacity, size has been set equal to capacity instead.
+ */
+axvector axv_newOverlay(void **items, uint64_t size, uint64_t capacity);
 /**
  * If destructor is set, call destructor on all items. Destroy axvector and free memory.
  * @return Context.
@@ -212,12 +226,6 @@ axvector *axv_slice(axvector *v, int64_t index1, int64_t index2);
  */
 axvector *axv_rslice(axvector *v, int64_t index1, int64_t index2);
 /**
- * If a destructor is set, it is called on the argument. Otherwise this function does nothing.
- * @param val Value to call destructor on.
- * @return Self.
- */
-axvector *axv_destroyItem(axvector *v, void *val);
-/**
  * Search the greatest item according to the comparator using forward linear search.
  * @return The greatest item or NULL if the vector is empty.
  */
@@ -281,12 +289,12 @@ axvector *axv_filter(axvector *v, bool (*f)(const void *, void *), void *arg);
  * Keep all items x in the vector that satisfy f(x, arg), reject all those that don't, and close the
  * resulting gaps by contracting the space between all remaining items, thus preserving the relative order
  * of the remaining items. All rejected items are moved to a new vector in the same relative order in which
- * they appeared in the original vector. The filter is applied linearly from first to last item. O(n).
+ * they appeared in the original vector. The partitioning is applied linearly from first to last item. O(n).
  * @param f Some predicate to filter the vector.
  * @param arg An optional argument passed to the predicate.
  * @return The new axvector containing all rejected items or NULL if OOM, in which case no filtering is done.
  */
-axvector *axv_filterSplit(axvector *v, bool (*f)(const void *, void *), void *arg);
+axvector *axv_partition(axvector *v, bool (*f)(const void *, void *), void *arg);
 /**
  * Let f be a function taking (item in vector, optional argument).
  * Call f(x, arg) on every item x until f returns false or all items of the vector have been exhausted.
@@ -305,18 +313,6 @@ axvector *axv_foreach(axvector *v, bool (*f)(void *, void *), void *arg);
  * @return Self.
  */
 axvector *axv_rforeach(axvector *v, bool (*f)(void *, void *), void *arg);
-/**
- * Let f be a function taking (item in vector, optional argument).
- * Call f(x, arg) on every item x in some section until f returns false or all items of the section have
- * been exhausted. Items are iterated linearly from first to last.
- * @param f Function to call on items.
- * @param arg An optional argument passed to the function.
- * @param index1 Beginning of section. May be negative. Inclusive.
- * @param index2 End of section. May be negative. Exclusive.
- * @return Self.
- */
-axvector *axv_forSection(axvector *v, bool (*f)(void *, void *), void *arg,
-                         int64_t index1, int64_t index2);
 /**
  * Check if vector is sorted according to comparator. Items are checked linearly from first to last.
  * @return True if sorted, false if not.
@@ -352,14 +348,6 @@ static inline int64_t axv_binarySearch(axvector *v, void *val) {
  * @return Index of the first item which matches the argument or -1 if no such item is found.
  */
 int64_t axv_linearSearch(axvector *v, void *val);
-/**
- * Linear search the argument in some section of the vector. Forward search is used.
- * @param val Value to search using the vector's comparator.
- * @param index1 Beginning of section. May be negative. Inclusive.
- * @param index2 End of section. May be negative. Exclusive.
- * @return Index of the first item which matches the argument or -1 if no such item is found.
- */
-int64_t axv_linearSearchSection(axvector *v, void *val, int64_t index1, int64_t index2);
 /**
  * Set comparator function. Type must match int (*)(const void *, const void *).
  * Refer to the C standard on the definition of a compliant comparator function.
@@ -423,6 +411,30 @@ static inline int64_t axv_cap(axvector *v) {
         uint64_t u;
         int64_t s;
     }) {.u = v->cap}.s;
+}
+/**
+ * Lock or unlock this vector. A locked vector's capacity cannot be changed. Operations that try to alter
+ * the capacity will fail.
+ * @param lockState True to lock, false to unlock.
+ * @return Self.
+ */
+static inline axvector *axv_lock(axvector *v, bool lockState) {
+    v->locked = lockState;
+    return v;
+}
+/**
+ * Check if this vector is locked.
+ * @return True if locked, false if not.
+ */
+static inline bool axv_isLocked(axvector *v) {
+    return v->locked;
+}
+/**
+ * Check if this vector is an overlay.
+ * @return True if this vector is an overlay, false if not.
+ */
+static inline bool axv_isOverlay(axvector *v) {
+    return v->overlay;
 }
 
 
