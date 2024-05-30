@@ -187,7 +187,7 @@ axvector *axv_discard(axvector *v, uint64_t n);
 axvector *axv_clear(axvector *v);
 /**
  * Create a shallow copy of a vector. The copy contains all items of the original and is created with the same
- * capacity. The comparator and context are copied, the destructor and reference counter are not.
+ * capacity. The comparator and context are copied, the destructor is not.
  * @return New axvector or NULL if OOM.
  */
 axvector *axv_copy(axvector *v);
@@ -210,7 +210,7 @@ bool axv_concat(axvector *v1, axvector *v2);
 /**
  * Create a shallow copy of a vector. The copy contains all items of the original which are in the specified slice.
  * The copy is created with capacity equal to the number of items copied or 1 if the slice is empty. The comparator
- * and context are copied, the destructor and reference counter are not.
+ * and context are copied, the destructor is not.
  * @param index1 Beginning of slice. May be negative. Inclusive.
  * @param index2 End of slice. May be negative. Exclusive.
  * @return New axvector or NULL if OOM.
@@ -219,7 +219,7 @@ axvector *axv_slice(axvector *v, int64_t index1, int64_t index2);
 /**
  * Create a shallow copy of a vector. The copy contains all items of the original which are in the specified slice
  * in reverse order. The copy is created with capacity equal to the number of items copied or 1 if the slice is empty.
- * The comparator and context are copied, the destructor and reference counter are not.
+ * The comparator and context are copied, the destructor is not.
  * @param index1 Beginning of slice. May be negative. Inclusive.
  * @param index2 End of slice. May be negative. Exclusive.
  * @return New axvector or NULL if OOM.
