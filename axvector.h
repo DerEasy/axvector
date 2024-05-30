@@ -154,7 +154,7 @@ axvector *axv_reverse(axvector *v);
  * Reverse items in some section in-place.
  * @param index1 Beginning of section. May be negative. Inclusive.
  * @param index2 End of section. May be negative. Exclusive.
- * @return
+ * @return True iff index out of range.
  */
 bool axv_reverseSection(axvector *v, int64_t index1, int64_t index2);
 /**
