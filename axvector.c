@@ -15,6 +15,11 @@ union Int64 {
 };
 
 
+static void *(*malloc_)(size_t size) = malloc;
+static void *(*realloc_)(void *ptr, size_t size) = realloc;
+static void (*free_)(void *ptr) = free;
+
+
 static union Int64 normaliseIndex(uint64_t len, int64_t index) {
     union Int64 i = {.s = index};
     i.u += (i.s < 0) * len;
@@ -36,10 +41,10 @@ static int defaultComparator(const void *a, const void *b) {
 
 axvector *axv_sizedNew(uint64_t size) {
     size = MAX(1, size);
-    axvector *v = malloc(sizeof *v);
-    if (v) v->items = malloc(toItemSize(size));
+    axvector *v = malloc_(sizeof *v);
+    if (v) v->items = malloc_(toItemSize(size));
     if (!v || !v->items) {
-        free(v);
+        free_(v);
         return NULL;
     }
     v->len = 0;
@@ -80,8 +85,8 @@ void *axv_destroy(axvector *v) {
     }
     void *context = v->context;
     if (!v->overlay) {
-        free(v->items);
-        free(v);
+        free_(v->items);
+        free_(v);
     }
     return context;
 }
@@ -278,7 +283,7 @@ bool axv_resize(axvector *v, uint64_t size) {
     } else {
         v->len = MIN(v->len, size);
     }
-    void **items = realloc(v->items, toItemSize(size));
+    void **items = realloc_(v->items, toItemSize(size));
     if (!items)
         return true;
     v->items = items;
@@ -466,4 +471,11 @@ int64_t axv_linearSearchSection(axvector *v, void *val, int64_t index1, int64_t 
 axvector *axv_setComparator(axvector *v, int (*cmp)(const void *, const void *)) {
     v->cmp = cmp ? cmp : defaultComparator;
     return v;
+}
+
+
+void axv_memoryfn(void *(*malloc_fn)(size_t), void *(*realloc_fn)(void *, size_t), void (*free_fn)(void *)) {
+    malloc_ = malloc_fn ? malloc_fn : malloc;
+    realloc_ = realloc_fn ? realloc_fn : realloc;
+    free_ = free_fn ? free_fn : free;
 }

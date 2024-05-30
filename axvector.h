@@ -414,7 +414,7 @@ static inline int64_t axv_cap(axvector *v) {
 }
 /**
  * Lock or unlock this vector. A locked vector's capacity cannot be changed. Operations that try to alter
- * the capacity will fail.
+ * the capacity will fail (as OOM).
  * @param lockState True to lock, false to unlock.
  * @return Self.
  */
@@ -436,6 +436,14 @@ static inline bool axv_isLocked(axvector *v) {
 static inline bool axv_isOverlay(axvector *v) {
     return v->overlay;
 }
+/**
+ * Set custom memory functions. All three of them must be set and be compatible with one another.
+ * Passing NULL for any function will activate its standard library counterpart.
+ * @param malloc_fn The malloc function.
+ * @param realloc_fn The realloc function.
+ * @param free_fn The free function.
+ */
+void axv_memoryfn(void *(*malloc_fn)(size_t), void *(*realloc_fn)(void *, size_t), void (*free_fn)(void *));
 
 
 #endif //AXVECTOR_AXVECTOR_H
