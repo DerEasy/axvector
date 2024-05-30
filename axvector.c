@@ -276,13 +276,13 @@ axvector *axv_rslice(axvector *v, int64_t index1, int64_t index2) {
 bool axv_resize(axvector *v, uint64_t size) {
     if (v->locked)
         return true;
-    size = MAX(1, size);
     if (size < v->len && v->destroy) {
         while (v->len > size)
             v->destroy(v->items[--v->len]);
     } else {
         v->len = MIN(v->len, size);
     }
+    size = MAX(1, size);
     void **items = realloc_(v->items, toItemSize(size));
     if (!items)
         return true;
