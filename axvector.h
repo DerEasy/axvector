@@ -5,6 +5,10 @@
 #ifndef AXVECTOR_AXVECTOR_H
 #define AXVECTOR_AXVECTOR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -58,11 +62,12 @@ axvector *axv_new(void);
  * array upon destruction. Thus, it is not strictly necessary to call axv_destroy() on an overlay, as this will
  * only call the destructor on all items, if there is one.
  * @param items An array of items of type void *.
- * @param size Number of items currently stored in the items array. This must not exceed the capacity.
- * @param capacity Number of items that could potentially be stored in the items array. Upper limit of size.
- * @return New axvector in stack memory. If size was greater than capacity, size has been set equal to capacity instead.
+ * @param length Number of items currently stored in the items array. This must not exceed the capacity.
+ * @param capacity Number of items that could potentially be stored in the items array. Upper limit of length.
+ * @return New axvector in stack memory, hence no axv_destroy() explicitly necessary. If length was greater than
+ * capacity, length has been set equal to capacity instead.
  */
-axvector axv_newOverlay(void **items, uint64_t size, uint64_t capacity);
+axvector axv_newOverlay(void **items, uint64_t length, uint64_t capacity);
 /**
  * If destructor is set, call destructor on all items. Destroy axvector and free memory.
  * @return Context.
@@ -101,14 +106,18 @@ static inline void *axv_top(axvector *v) {
     return v->len ? v->items[v->len - 1] : NULL;
 }
 /**
- * Number of items in this vector.
- * @return Length of vector.
+ * Signed number of items in this vector.
+ * @return Signed length of vector.
  */
 static inline int64_t axv_len(axvector *v) {
-    return (union {
-        uint64_t u;
-        int64_t s;
-    }) {.u = v->len}.s;
+    return (int64_t) v->len;
+}
+/**
+ * Unsigned number of items in this vector.
+ * @return Unsigned length of vector.
+ */
+static inline uint64_t axv_ulen(axvector *v) {
+    return v->len;
 }
 /**
  * Index vector and return item.
@@ -116,12 +125,9 @@ static inline int64_t axv_len(axvector *v) {
  * @return Item at index or NULL if index out of range.
  */
 static inline void *axv_at(axvector *v, int64_t index) {
-    union Int64 {
-        uint64_t u;
-        int64_t s;
-    } i = {.s = index};
-    i.u += (i.s < 0) * v->len;
-    return i.u < v->len ? v->items[i.u] : NULL;
+    uint64_t uindex = index;
+    uindex += (index < 0) * v->len;
+    return uindex < v->len ? v->items[uindex] : NULL;
 }
 /**
  * Index vector directly and return item.
@@ -339,7 +345,7 @@ axvector *axv_sortSection(axvector *v, int64_t index1, int64_t index2);
  * @return Index of any item which matches the argument or -1 if no such item is found.
  */
 static inline int64_t axv_binarySearch(axvector *v, void *val) {
-    void **found = bsearch(&val, v->items, v->len, sizeof *v->items, v->cmp);
+    void **found = (void **) bsearch(&val, v->items, v->len, sizeof *v->items, v->cmp);
     return found ? found - v->items : -1;
 }
 /**
@@ -402,15 +408,20 @@ static inline void **axv_data(axvector *v) {
     return v->items;
 }
 /**
- * Capacity of this vector. The capacity is the maximum number of items that fit without the need of resizing
+ * Signed capacity of this vector. The capacity is the maximum number of items that fit without the need of resizing
  * the vector.
- * @return Capacity.
+ * @return Signed capacity.
  */
 static inline int64_t axv_cap(axvector *v) {
-    return (union {
-        uint64_t u;
-        int64_t s;
-    }) {.u = v->cap}.s;
+    return (int64_t) v->cap;
+}
+/**
+ * Unsigned capacity of this vector. The capacity is the maximum number of items that fit without the need of resizing
+ * the vector.
+ * @return Unsigned capacity.
+ */
+static inline uint64_t axv_ucap(axvector *v) {
+    return v->cap;
 }
 /**
  * Lock or unlock this vector. A locked vector's capacity cannot be changed. Operations that try to alter
@@ -445,5 +456,8 @@ static inline bool axv_isOverlay(axvector *v) {
  */
 void axv_memoryfn(void *(*malloc_fn)(size_t), void *(*realloc_fn)(void *, size_t), void (*free_fn)(void *));
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif //AXVECTOR_AXVECTOR_H

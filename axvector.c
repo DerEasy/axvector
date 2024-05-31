@@ -2,6 +2,10 @@
 // Created by easy on 27.10.23.
 //
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "axvector.h"
 #include <string.h>
 
@@ -9,21 +13,15 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 
-union Int64 {
-    uint64_t u;
-    int64_t s;
-};
-
-
 static void *(*malloc_)(size_t size) = malloc;
 static void *(*realloc_)(void *ptr, size_t size) = realloc;
 static void (*free_)(void *ptr) = free;
 
 
-static union Int64 normaliseIndex(uint64_t len, int64_t index) {
-    union Int64 i = {.s = index};
-    i.u += (i.s < 0) * len;
-    return i;
+static uint64_t normaliseIndex(uint64_t len, int64_t index) {
+    uint64_t uindex = index;
+    uindex += (index < 0) * len;
+    return uindex;
 }
 
 
@@ -33,16 +31,17 @@ static uint64_t toItemSize(uint64_t n) {
 
 
 static int defaultComparator(const void *a, const void *b) {
-    const void *x = *(const void **) a;
-    const void *y = *(const void **) b;
+    uintptr_t x = (uintptr_t) *(const void **) a;
+    uintptr_t y = (uintptr_t) *(const void **) b;
     return (x > y) - (x < y);
 }
 
 
 axvector *axv_sizedNew(uint64_t size) {
     size = MAX(1, size);
-    axvector *v = malloc_(sizeof *v);
-    if (v) v->items = malloc_(toItemSize(size));
+    axvector *v = (axvector *) malloc_(sizeof *v);
+    if (v)
+        v->items = (void **) malloc_(toItemSize(size));
     if (!v || !v->items) {
         free_(v);
         return NULL;
@@ -63,11 +62,11 @@ axvector *axv_new(void) {
 }
 
 
-axvector axv_newOverlay(void **items, uint64_t size, uint64_t capacity) {
+axvector axv_newOverlay(void **items, uint64_t length, uint64_t capacity) {
     axvector v;
-    size = MIN(size, capacity);
+    length = MIN(length, capacity);
     v.items = items;
-    v.len = size;
+    v.len = length;
     v.cap = capacity;
     v.cmp = NULL;
     v.destroy = NULL;
@@ -93,7 +92,7 @@ void *axv_destroy(axvector *v) {
 
 
 bool axv_set(axvector *v, int64_t index, void *val) {
-    uint64_t i = normaliseIndex(v->len, index).u;
+    uint64_t i = normaliseIndex(v->len, index);
     if (i >= v->len)
         return true;
     v->items[i] = val;
@@ -102,8 +101,8 @@ bool axv_set(axvector *v, int64_t index, void *val) {
 
 
 bool axv_swap(axvector *v, int64_t index1, int64_t index2) {
-    uint64_t i1 = normaliseIndex(v->len, index1).u;
-    uint64_t i2 = normaliseIndex(v->len, index2).u;
+    uint64_t i1 = normaliseIndex(v->len, index1);
+    uint64_t i2 = normaliseIndex(v->len, index2);
     if (i1 >= v->len || i2 >= v->len)
         return true;
     void *tmp = v->items[i1];
@@ -127,8 +126,8 @@ axvector *axv_reverse(axvector *v) {
 
 
 bool axv_reverseSection(axvector *v, int64_t index1, int64_t index2) {
-    uint64_t i1 = normaliseIndex(v->len, index1).u;
-    uint64_t i2 = normaliseIndex(v->len, index2).u;
+    uint64_t i1 = normaliseIndex(v->len, index1);
+    uint64_t i2 = normaliseIndex(v->len, index2);
     if (i1 >= v->len || i2 > v->len)
         return true;
     void **l = v->items + i1;
@@ -283,7 +282,7 @@ bool axv_resize(axvector *v, uint64_t size) {
         v->len = MIN(v->len, size);
     }
     size = MAX(1, size);
-    void **items = realloc_(v->items, toItemSize(size));
+    void **items = (void **) realloc_(v->items, toItemSize(size));
     if (!items)
         return true;
     v->items = items;
@@ -438,8 +437,8 @@ bool axv_isSorted(axvector *v) {
 
 
 axvector *axv_sortSection(axvector *v, int64_t index1, int64_t index2) {
-    uint64_t i1 = normaliseIndex(v->len, index1).u;
-    uint64_t i2 = normaliseIndex(v->len, index2).u;
+    uint64_t i1 = normaliseIndex(v->len, index1);
+    uint64_t i2 = normaliseIndex(v->len, index2);
     qsort(v->items + i1, i2 - i1, sizeof *v->items, v->cmp);
     return v;
 }
@@ -448,19 +447,6 @@ axvector *axv_sortSection(axvector *v, int64_t index1, int64_t index2) {
 int64_t axv_linearSearch(axvector *v, void *val) {
     const int64_t length = axv_len(v);
     for (int64_t i = 0; i < length; ++i) {
-        if (v->cmp(&val, v->items + i) == 0)
-            return i;
-    }
-    return -1;
-}
-
-
-int64_t axv_linearSearchSection(axvector *v, void *val, int64_t index1, int64_t index2) {
-    int64_t i1 = normaliseIndex(v->len, index1).s;
-    int64_t i2 = normaliseIndex(v->len, index2).s;
-    if (i1 >= axv_len(v) || i2 > axv_len(v) || i1 < 0 || i2 < 0)
-        return -1;
-    for (int64_t i = i1; i < i2; ++i) {
         if (v->cmp(&val, v->items + i) == 0)
             return i;
     }
@@ -479,3 +465,7 @@ void axv_memoryfn(void *(*malloc_fn)(size_t), void *(*realloc_fn)(void *, size_t
     realloc_ = realloc_fn ? realloc_fn : realloc;
     free_ = free_fn ? free_fn : free;
 }
+
+#ifdef __cplusplus
+}
+#endif
