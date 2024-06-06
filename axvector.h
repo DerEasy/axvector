@@ -363,6 +363,8 @@ int64_t axv_linearSearch(axvector *v, void *val);
 /**
  * Set comparator function. Type must match int (*)(const void *, const void *).
  * Refer to the C standard on the definition of a compliant comparator function.
+ * Keep in mind the comparator is passed pointers to the type of item stored in the vector.
+ * So if the vector is storing int * then the comparator is given arguments of type int **.
  * @param cmp Comparator or NULL to activate default comparator (compares addresses).
  * @return Self.
  */

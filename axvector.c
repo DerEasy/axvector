@@ -189,6 +189,8 @@ axvector *axv_discard(axvector *v, uint64_t n) {
     if (v->destroy) {
         while (v->len > n)
             v->destroy(v->items[--v->len]);
+    } else {
+        v->len = n;
     }
     return v;
 }
