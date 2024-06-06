@@ -270,7 +270,7 @@ bool axv_all(axvector *v, bool (*f)(const void *, void *), void *arg);
  * @param val The value all items are to be compared against.
  * @return The resulting count.
  */
-int64_t axv_count(axvector *v, void *val);
+uint64_t axv_count(axvector *v, void *val);
 /**
  * Using the first vector's comparator, compare all items of the first and second vector. Comparison stops
  * prematurely if any unequal item is found. Comparisons are done linearly from first to last item.

@@ -19,6 +19,7 @@ extern "C" {
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 
+/* Return values of malloc_ and realloc_ are casted in this file for C++ compatiblity. */
 static void *(*malloc_)(size_t size) = malloc;
 static void *(*realloc_)(void *ptr, size_t size) = realloc;
 static void (*free_)(void *ptr) = free;
@@ -343,8 +344,8 @@ bool axv_all(axvector *v, bool (*f)(const void *, void *), void *arg) {
 }
 
 
-int64_t axv_count(axvector *v, void *val) {
-    int64_t n = 0;
+uint64_t axv_count(axvector *v, void *val) {
+    uint64_t n = 0;
     void **curr = v->items;
     void **bound = v->items + v->len;
     while (curr < bound)
