@@ -98,15 +98,6 @@ void *axv_destroy(axvector *v) {
 }
 
 
-bool axv_set(axvector *v, int64_t index, void *val) {
-    uint64_t i = normaliseIndex(v->len, index);
-    if (i >= v->len)
-        return true;
-    v->items[i] = val;
-    return false;
-}
-
-
 bool axv_swap(axvector *v, int64_t index1, int64_t index2) {
     uint64_t i1 = normaliseIndex(v->len, index1);
     uint64_t i2 = normaliseIndex(v->len, index2);

@@ -149,7 +149,13 @@ static inline void *axv_get(struct axvector *v, uint64_t index) {
  * @param val The new item.
  * @return True iff index out of range.
  */
-bool axv_set(axvector *v, int64_t index, void *val);
+static inline bool axv_set(axvector *v, int64_t index, void *val) {
+    uint64_t i = index + (index < 0) * v->len;
+    if (i >= v->len)
+        return true;
+    v->items[i] = val;
+    return false;
+}
 /**
  * Swap two items.
  * @param index1 May be negative.
