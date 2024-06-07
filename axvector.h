@@ -55,7 +55,7 @@ typedef struct axvector {
  * @param size Capacity.
  * @return New axvector or NULL if OOM.
  */
-axvector *axv_sizedNew(uint64_t size);
+axvector *axv_newSized(uint64_t size);
 /**
  * Create axvector with default capacity.
  * @return New axvector or NULL if OOM.
@@ -131,8 +131,7 @@ static inline uint64_t axv_ulen(axvector *v) {
  * @return Item at index or NULL if index out of range.
  */
 static inline void *axv_at(axvector *v, int64_t index) {
-    uint64_t uindex = index;
-    uindex += (index < 0) * v->len;
+    uint64_t uindex = index + (index < 0) * v->len;
     return uindex < v->len ? v->items[uindex] : NULL;
 }
 /**

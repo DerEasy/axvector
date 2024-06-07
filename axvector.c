@@ -26,9 +26,7 @@ static void (*free_)(void *ptr) = free;
 
 
 static uint64_t normaliseIndex(uint64_t len, int64_t index) {
-    uint64_t uindex = index;
-    uindex += (index < 0) * len;
-    return uindex;
+    return index + (index < 0) * len;
 }
 
 
@@ -44,7 +42,7 @@ static int defaultComparator(const void *a, const void *b) {
 }
 
 
-axvector *axv_sizedNew(uint64_t size) {
+axvector *axv_newSized(uint64_t size) {
     size = MAX(1, size);
     axvector *v = (axvector *) malloc_(sizeof *v);
     if (v)
@@ -65,7 +63,7 @@ axvector *axv_sizedNew(uint64_t size) {
 
 
 axvector *axv_new(void) {
-    return axv_sizedNew(7);
+    return axv_newSized(7);
 }
 
 
@@ -198,7 +196,7 @@ axvector *axv_clear(axvector *v) {
 
 
 axvector *axv_copy(axvector *v) {
-    axvector *v2 = axv_sizedNew(v->cap);
+    axvector *v2 = axv_newSized(v->cap);
     if (!v2)
         return NULL;
 
@@ -240,7 +238,7 @@ axvector *axv_slice(axvector *v, int64_t index1, int64_t index2) {
     i1 = MAX(0, i1); i1 = MIN(i1, axv_len(v));
     i2 = MAX(0, i2); i2 = MIN(i2, axv_len(v));
 
-    axvector *v2 = axv_sizedNew(v->len);
+    axvector *v2 = axv_newSized(v->len);
     if (!v2)
         return NULL;
     memcpy(v2->items, v->items + i1, toItemSize(i2 - i1));
@@ -258,7 +256,7 @@ axvector *axv_rslice(axvector *v, int64_t index1, int64_t index2) {
     i1 = MAX(0, i1); i1 = MIN(i1, axv_len(v));
     i2 = MAX(0, i2); i2 = MIN(i2, axv_len(v));
 
-    axvector *v2 = axv_sizedNew(v->len);
+    axvector *v2 = axv_newSized(v->len);
     if (!v2)
         return NULL;
     void **save = v2->items;
@@ -385,7 +383,7 @@ axvector *axv_filter(axvector *v, bool (*f)(const void *, void *), void *arg) {
 
 
 axvector *axv_partition(axvector *v, bool (*f)(const void *, void *), void *arg) {
-    axvector *v2 = axv_sizedNew(v->len);
+    axvector *v2 = axv_newSized(v->len);
     if (!v2) return NULL;
 
     uint64_t len1 = 0, len2 = 0;
