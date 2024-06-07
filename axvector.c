@@ -8,9 +8,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include "axvector.h"
 #include <string.h>
@@ -19,7 +16,6 @@ extern "C" {
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 
-/* Return values of malloc_ and realloc_ are casted in this file for C++ compatiblity. */
 static void *(*malloc_)(size_t size) = malloc;
 static void *(*realloc_)(void *ptr, size_t size) = realloc;
 static void (*free_)(void *ptr) = free;
@@ -44,9 +40,9 @@ static int defaultComparator(const void *a, const void *b) {
 
 axvector *axv_newSized(uint64_t size) {
     size = MAX(1, size);
-    axvector *v = (axvector *) malloc_(sizeof *v);
+    axvector *v = malloc_(sizeof *v);
     if (v)
-        v->items = (void **) malloc_(toItemSize(size));
+        v->items = malloc_(toItemSize(size));
     if (!v || !v->items) {
         free_(v);
         return NULL;
@@ -280,7 +276,7 @@ bool axv_resize(axvector *v, uint64_t size) {
         v->len = MIN(v->len, size);
     }
     size = MAX(1, size);
-    void **items = (void **) realloc_(v->items, toItemSize(size));
+    void **items = realloc_(v->items, toItemSize(size));
     if (!items)
         return true;
     v->items = items;
@@ -463,7 +459,3 @@ void axv_memoryfn(void *(*malloc_fn)(size_t), void *(*realloc_fn)(void *, size_t
     realloc_ = realloc_fn ? realloc_fn : realloc;
     free_ = free_fn ? free_fn : free;
 }
-
-#ifdef __cplusplus
-}
-#endif
