@@ -285,11 +285,13 @@ uint64_t axv_count(axvector *v, void *val);
  */
 bool axv_compare(axvector *v1, axvector *v2);
 /**
- * Apply some function f on every item. Maps are done linearly from first to last item.
+ * Let f be a function taking (item in vector, optional argument).
+ * Apply f to each item in the vector. Maps are done linearly from first to last item.
  * @param f Function taking an item and returning whatever to overwrite its spot in the vector with.
+ * @param arg An optional argument passed to the function.
  * @return Self.
  */
-axvector *axv_map(axvector *v, void *(*f)(void *));
+axvector *axv_map(axvector *v, void *(*f)(void *, void *), void *arg);
 /**
  * Let f be a predicate taking (item in vector, optional argument).
  * Keep all items x in the vector that satisfy f(x, arg), remove all those that don't, and close the

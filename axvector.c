@@ -352,11 +352,11 @@ bool axv_compare(axvector *v1, axvector *v2) {
 }
 
 
-axvector *axv_map(axvector *v, void *(*f)(void *)) {
+axvector *axv_map(axvector *v, void *(*f)(void *, void *), void *arg) {
     void **val = v->items;
     void **bound = v->items + v->len;
     while (val < bound) {
-        *val = f(*val);
+        *val = f(*val, arg);
         ++val;
     }
     return v;
