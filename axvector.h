@@ -439,13 +439,21 @@ static inline uint64_t axv_ucap(axvector *v) {
     return v->cap;
 }
 /**
- * Lock or unlock this vector. A locked vector's capacity cannot be changed. Operations that try to alter
- * the capacity will fail (as OOM).
- * @param lockState True to lock, false to unlock.
+ * Lock this vector. A locked vector's capacity cannot be changed. Operations that try to alter
+ * the capacity will fail.
  * @return Self.
  */
-static inline axvector *axv_lock(axvector *v, bool lockState) {
-    v->locked = lockState;
+static inline axvector *axv_lock(axvector *v) {
+    v->locked = true;
+    return v;
+}
+/**
+ * Unlock this vector. A locked vector's capacity cannot be changed. Operations that try to alter
+ * the capacity will fail.
+ * @return Self.
+ */
+static inline axvector *axv_unlock(axvector *v) {
+    v->locked = false;
     return v;
 }
 /**
